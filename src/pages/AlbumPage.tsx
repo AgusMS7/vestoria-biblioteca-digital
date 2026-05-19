@@ -1,0 +1,341 @@
+import { useState, useMemo } from 'react'
+import { useParams, useNavigate } from 'react-router-dom'
+import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowLeft, Play } from 'lucide-react'
+import { albums } from '@/data/albums'
+import { FullscreenViewer } from '@/components/FullscreenViewer'
+
+// Genera colores del album basados en el color dominante
+function getAlbumPageColors(color: { h: number; s: number; l: number }) {
+  const { h, s, l } = color
+  return {
+    header: `hsl(${h} ${Math.min(s + 5, 45)}% ${Math.max(l - 5, 35)}%)`,
+    headerLight: `hsl(${h} ${Math.min(s, 40)}% ${Math.min(l + 10, 50)}%)`,
+    headerDark: `hsl(${h} ${Math.min(s + 10, 50)}% ${Math.max(l - 15, 22)}%)`,
+    // Titulo: mismo tono pero MAS CLARO para resaltar
+    titleColor: `hsl(${h} ${Math.min(s + 5, 35)}% ${Math.min(l + 40, 88)}%)`,
+    titleShadow: `hsl(${h} ${Math.min(s + 15, 50)}% ${Math.max(l - 20, 18)}%)`,
+    // Subtitulo ligeramente mas opaco que el titulo
+    subtitleColor: `hsl(${h} ${Math.min(s, 30)}% ${Math.min(l + 30, 75)}%)`,
+    accent: `hsl(${h} ${Math.min(s + 10, 70)}% ${Math.min(l + 10, 60)}%)`,
+    // Boton de volver
+    backBtnBg: `hsl(${h} ${Math.min(s, 35)}% ${Math.min(l + 25, 70)}%)`,
+    backBtnColor: `hsl(${h} ${Math.min(s + 10, 45)}% ${Math.max(l - 15, 25)}%)`,
+    // Anillos con color dominante
+    ringColor: `hsl(${h} ${Math.min(s + 5, 40)}% ${Math.min(l + 5, 48)}%)`,
+    ringHighlight: `hsl(${h} ${Math.max(s - 10, 20)}% ${Math.min(l + 25, 70)}%)`,
+    // Boton play
+    buttonHue: h,
+    buttonSat: Math.min(s, 40),
+    buttonLight: Math.min(l, 45),
+    playBtnText: `hsl(${h} ${Math.min(s + 10, 45)}% ${Math.max(l - 15, 25)}%)`,
+  }
+}
+
+// Configuraciones de cinta adhesiva para dar variedad
+const TAPE_STYLES = [
+  { rotation: 35, top: '-8px', right: '-12px', left: 'auto', bottom: 'auto', width: '50px' },
+  { rotation: -35, top: '-8px', left: '-12px', right: 'auto', bottom: 'auto', width: '50px' },
+  { rotation: 0, top: '-6px', left: '50%', right: 'auto', bottom: 'auto', width: '60px', translateX: true },
+  { rotation: -40, bottom: '-8px', left: '-10px', right: 'auto', top: 'auto', width: '45px' },
+  { rotation: 5, top: '-5px', right: '10px', left: 'auto', bottom: 'auto', width: '55px' },
+  { rotation: -30, top: '-6px', left: '-8px', right: 'auto', bottom: 'auto', width: '40px', dual: true },
+]
+
+// Componente de cinta adhesiva
+function AdhesiveTape({ style, isSecond = false }: { style: typeof TAPE_STYLES[0]; isSecond?: boolean }) {
+  const tapeStyle: React.CSSProperties = {
+    position: 'absolute',
+    top: isSecond ? 'auto' : style.top,
+    left: isSecond ? 'auto' : style.left,
+    right: isSecond ? '-8px' : style.right,
+    bottom: isSecond ? '-6px' : style.bottom,
+    width: style.width,
+    height: '18px',
+    transform: `rotate(${isSecond ? 30 : style.rotation}deg) ${style.translateX && !isSecond ? 'translateX(-50%)' : ''}`,
+    background: 'linear-gradient(180deg, rgba(235,220,195,0.9) 0%, rgba(220,200,170,0.92) 50%, rgba(205,185,155,0.9) 100%)',
+    boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
+    zIndex: 10,
+  }
+  return <div style={tapeStyle} />
+}
+
+// Foto estilo polaroid con cinta adhesiva
+function PolaroidPhoto({ 
+  item, 
+  index, 
+  onClick,
+}: { 
+  item: { id: string; thumbnail: string; title?: string; type: string }
+  index: number
+  onClick: () => void
+}) {
+  const tapeStyle = TAPE_STYLES[index % TAPE_STYLES.length]
+  const rotation = ((index * 7) % 9) - 4
+  
+  return (
+    <motion.button
+      initial={{ opacity: 0, scale: 0.9, rotate: rotation - 3 }}
+      animate={{ opacity: 1, scale: 1, rotate: rotation }}
+      transition={{ duration: 0.4, delay: index * 0.04 }}
+      whileHover={{ scale: 1.05, rotate: 0, zIndex: 20 }}
+      whileTap={{ scale: 0.98 }}
+      onClick={onClick}
+      className="group relative"
+    >
+      <div 
+        className="relative bg-white p-2 pb-4 shadow-lg transition-shadow duration-300 group-hover:shadow-xl"
+        style={{
+          boxShadow: '0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)',
+          transform: `rotate(${rotation}deg)`,
+        }}
+      >
+        <AdhesiveTape style={tapeStyle} />
+        {tapeStyle.dual && <AdhesiveTape style={tapeStyle} isSecond />}
+        
+        <div className="relative aspect-square overflow-hidden bg-gray-100">
+          <img
+            src={item.thumbnail}
+            alt={item.title || `Foto ${index + 1}`}
+            loading="lazy"
+            className="w-full h-full object-cover"
+          />
+          
+          {item.type === 'video' && (
+            <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-sm">
+              <Play className="w-3 h-3 text-white fill-white" />
+            </div>
+          )}
+        </div>
+      </div>
+    </motion.button>
+  )
+}
+
+// Anillos de encuadernacion - con color dominante del album
+function BindingRings({ ringColor, ringHighlight, paperColor }: { ringColor: string; ringHighlight: string; paperColor: string }) {
+  return (
+    <div className="absolute -bottom-4 left-0 right-0 flex justify-between px-8 sm:px-16 md:px-24 lg:px-32 z-30 pointer-events-none">
+      {/* Grupo izquierdo - 2 anillos separados */}
+      <div className="flex gap-6 sm:gap-8">
+        {[0, 1].map((i) => (
+          <div 
+            key={`left-${i}`}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative"
+            style={{
+              background: `linear-gradient(145deg, ${ringHighlight} 0%, ${ringColor} 40%, ${ringColor} 60%, ${ringHighlight} 100%)`,
+              boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3)',
+            }}
+          >
+            <div 
+              className="absolute inset-[6px] sm:inset-[7px] rounded-full"
+              style={{
+                background: paperColor,
+                boxShadow: 'inset 1px 2px 4px rgba(0,0,0,0.35)',
+              }}
+            />
+          </div>
+        ))}
+      </div>
+      
+      {/* Grupo derecho - 2 anillos separados */}
+      <div className="flex gap-6 sm:gap-8">
+        {[0, 1].map((i) => (
+          <div 
+            key={`right-${i}`}
+            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative"
+            style={{
+              background: `linear-gradient(145deg, ${ringHighlight} 0%, ${ringColor} 40%, ${ringColor} 60%, ${ringHighlight} 100%)`,
+              boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3)',
+            }}
+          >
+            <div 
+              className="absolute inset-[6px] sm:inset-[7px] rounded-full"
+              style={{
+                background: paperColor,
+                boxShadow: 'inset 1px 2px 4px rgba(0,0,0,0.35)',
+              }}
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export function AlbumPage() {
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [viewerOpen, setViewerOpen] = useState(false)
+  const [viewerIndex, setViewerIndex] = useState(0)
+  const [viewerAutoPlay, setViewerAutoPlay] = useState(false)
+
+  const album = useMemo(() => albums.find((a) => a.id === id), [id])
+  const colors = album ? getAlbumPageColors(album.dominantColor) : null
+
+  if (!album || !colors) {
+    return (
+      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-zinc-400">Album no encontrado</p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 px-6 py-2 rounded-lg bg-amber-600 text-white hover:opacity-90 transition-opacity"
+          >
+            Volver a la biblioteca
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const openViewer = (index: number) => {
+    setViewerIndex(index)
+    setViewerOpen(true)
+  }
+
+  const startSlideshow = () => {
+    setViewerIndex(0)
+    setViewerAutoPlay(true)
+    setViewerOpen(true)
+  }
+
+  return (
+    <div className="min-h-screen paper-background">
+      {/* Header con color del album */}
+      <motion.header
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="sticky top-0 z-40 relative"
+        style={{ 
+          background: `linear-gradient(180deg, ${colors.headerLight} 0%, ${colors.header} 60%, ${colors.headerDark} 100%)`,
+        }}
+      >
+
+        {/* Borde superior con luz */}
+        <div 
+          className="absolute top-0 left-0 right-0 h-[2px]"
+          style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)' }}
+        />
+        
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 relative z-20">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              {/* Boton volver rediseñado */}
+              <button
+                onClick={() => navigate('/')}
+                className="p-2.5 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+                style={{
+                  background: `linear-gradient(145deg, ${colors.backBtnBg}, ${colors.ringColor})`,
+                  boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+                }}
+              >
+                <ArrowLeft className="w-5 h-5" style={{ color: colors.backBtnColor }} />
+              </button>
+              
+              {/* Titulo y subtitulo - subtitulo debajo sin recuadro */}
+              <div className="flex flex-col">
+                <h1 
+                  className="text-xl sm:text-2xl font-semibold tracking-wide"
+                  style={{ 
+                    color: colors.titleColor,
+                    fontFamily: 'var(--font-display)',
+                    textShadow: `0 2px 4px ${colors.titleShadow}`,
+                  }}
+                >
+                  {album.title}
+                </h1>
+                <span 
+                  className="text-sm font-medium tracking-wide mt-0.5"
+                  style={{ 
+                    color: colors.subtitleColor,
+                    fontFamily: 'var(--font-display)',
+                    fontStyle: 'italic',
+                  }}
+                >
+                  {album.year} — {album.media.length} fotos
+                </span>
+              </div>
+            </div>
+
+            {/* Boton plastico con color del album */}
+            <button
+              onClick={startSlideshow}
+              className="plastic-button flex items-center gap-2 px-4 py-2"
+              style={{
+                '--btn-hue': colors.buttonHue,
+                '--btn-sat': `${colors.buttonSat}%`,
+                '--btn-light': `${colors.buttonLight}%`,
+              } as React.CSSProperties}
+            >
+              <Play 
+                className="w-4 h-4" 
+                style={{ 
+                  color: colors.playBtnText,
+                  fill: colors.playBtnText,
+                }}
+              />
+              <span 
+                className="hidden sm:inline font-semibold text-sm"
+                style={{ color: colors.playBtnText }}
+              >
+                Presentación
+              </span>
+            </button>
+          </div>
+        </div>
+        
+        {/* Sombra inferior del header */}
+        <div 
+          className="absolute bottom-0 left-0 right-0 h-4 translate-y-full pointer-events-none"
+          style={{ 
+            background: 'linear-gradient(to bottom, rgba(0,0,0,0.12), transparent)',
+          }}
+        />
+        
+        {/* Anillos de encuadernacion con color del album */}
+        <BindingRings 
+          ringColor={colors.ringColor} 
+          ringHighlight={colors.ringHighlight} 
+          paperColor="#f4ece0" 
+        />
+      </motion.header>
+      
+      {/* Espacio para los anillos */}
+      <div className="h-8" />
+
+      {/* Galeria de fotos */}
+      <main className="min-h-[calc(100vh-120px)] relative z-10">
+        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-10 sm:py-14">
+          {/* Grid de fotos polaroid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
+            {album.media.map((item, index) => (
+              <PolaroidPhoto
+                key={item.id}
+                item={item}
+                index={index}
+                onClick={() => openViewer(index)}
+              />
+            ))}
+          </div>
+        </div>
+      </main>
+
+      {/* Visor fullscreen */}
+      <AnimatePresence>
+        {viewerOpen && (
+          <FullscreenViewer
+            media={album.media}
+            initialIndex={viewerIndex}
+            autoPlay={viewerAutoPlay}
+            onClose={() => {
+              setViewerOpen(false)
+              setViewerAutoPlay(false)
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
