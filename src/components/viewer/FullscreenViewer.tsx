@@ -2,7 +2,20 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react'
+import {
+  X,
+  ChevronLeft,
+  ChevronRight,
+  Play,
+  Pause,
+  Maximize,
+  RotateCw,
+  ZoomIn,
+  Film,
+  SkipBack,
+  SkipForward,
+  Volume2,
+} from 'lucide-react'
 import { cn } from '@/lib'
 import type { Media } from '@/types'
 
@@ -13,24 +26,44 @@ interface FullscreenViewerProps {
   onClose: () => void
 }
 
-export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClose }: FullscreenViewerProps) {
+export function FullscreenViewer({
+  media,
+  initialIndex,
+  autoPlay = false,
+  onClose,
+}: FullscreenViewerProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [showControls, setShowControls] = useState(true)
-  const [isPlaying, setIsPlaying] = useState(false)
-  const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
+  const [controlsTimeout, setControlsTimeout] = useState<
+    ReturnType<typeof setTimeout> | null
+  >(null)
   const [touchStart, setTouchStart] = useState<number | null>(null)
-  const [preloadedImages, setPreloadedImages] = useState<Record<string, boolean>>({})
+  const [preloadedImages, setPreloadedImages] = useState<Record<string, boolean>>(
+    {}
+  )
+
+  // Image-specific state
+  const [rotation, setRotation] = useState(0)
+  const [fitMode, setFitMode] = useState<'contain' | 'cover'>('contain')
+  const [zoom, setZoom] = useState(1)
+
+  // Video-specific state
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false)
+  const [videoDuration, setVideoDuration] = useState(0)
+  const [videoCurrentTime, setVideoCurrentTime] = useState(0)
+  const [videoVolume, setVideoVolume] = useState(1)
+  const [isSlideshow, setIsSlideshow] = useState(autoPlay)
+
   const videoRef = useRef<HTMLVideoElement>(null)
+  const containerRef = useRef<HTMLDivElement>(null)
 
   const currentMedia = media[currentIndex]
 
   // Preload adjacent images for faster navigation
   useEffect(() => {
-    const indicesToPreload = [
-      currentIndex - 1,
-      currentIndex,
-      currentIndex + 1,
-    ].filter((idx) => idx >= 0 && idx < media.length)
+    const indicesToPreload = [currentIndex - 1, currentIndex, currentIndex + 1].filter(
+      (idx) => idx >= 0 && idx < media.length
+    )
 
     indicesToPreload.forEach((idx) => {
       const m = media[idx]
@@ -57,12 +90,34 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
 
   const goNext = useCallback(() => {
     setCurrentIndex((prev) => (prev + 1) % media.length)
+    setRotation(0)
+    setFitMode('contain')
+    setZoom(1)
+    setIsVideoPlaying(false)
+    setVideoCurrentTime(0)
   }, [media.length])
 
   const goPrev = useCallback(() => {
     setCurrentIndex((prev) => (prev - 1 + media.length) % media.length)
+    setRotation(0)
+    setFitMode('contain')
+    setZoom(1)
+    setIsVideoPlaying(false)
+    setVideoCurrentTime(0)
   }, [media.length])
 
+  // Slideshow: advances to next media after 6 seconds
+  useEffect(() => {
+    if (!isSlideshow || media.length <= 1) return
+
+    const interval = setInterval(() => {
+      goNext()
+    }, 6000)
+
+    return () => clearInterval(interval)
+  }, [isSlideshow, media.length, goNext])
+
+  // Keyboard navigation
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
@@ -71,42 +126,43 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
       if (e.key === ' ') {
         e.preventDefault()
         if (currentMedia.type === 'video') {
-          setIsPlaying(!isPlaying)
+          setIsVideoPlaying(!isVideoPlaying)
         }
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [onClose, goNext, goPrev, currentMedia.type, isPlaying])
+  }, [onClose, goNext, goPrev, currentMedia.type, isVideoPlaying])
 
-  useEffect(() => {
-    if (!autoPlay || media.length <= 1) return
-
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % media.length)
-    }, 6000)
-
-    return () => clearInterval(interval)
-  }, [autoPlay, media.length])
-
-  useEffect(() => {
-    hideControlsAfterDelay()
-    return () => {
-      if (controlsTimeout) clearTimeout(controlsTimeout)
-    }
-  }, [])
-
+  // Video playback control
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
-    
-    if (isPlaying) {
+
+    if (isVideoPlaying) {
       video.play()
     } else {
       video.pause()
     }
-  }, [isPlaying])
+  }, [isVideoPlaying])
+
+  // Video volume control
+  useEffect(() => {
+    const video = videoRef.current
+    if (video) {
+      video.volume = videoVolume
+    }
+  }, [videoVolume])
+
+  // Update video current time when slider changes
+  const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const newTime = parseFloat(e.target.value)
+    setVideoCurrentTime(newTime)
+    if (videoRef.current) {
+      videoRef.current.currentTime = newTime
+    }
+  }
 
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX)
@@ -123,6 +179,13 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
     setTouchStart(null)
   }
 
+  // Compute image dimensions considering rotation
+  const getImageDimensions = () => {
+    const isRotated = rotation === 90 || rotation === 270
+    // After rotation, width and height are swapped
+    return isRotated ? { width: '100%', height: 'auto' } : { width: 'auto', height: '100%' }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -133,6 +196,7 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
+      ref={containerRef}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -141,23 +205,42 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.2 }}
-          className="absolute inset-0 flex items-center justify-center"
+          className="absolute inset-0 flex items-center justify-center overflow-hidden"
         >
           {currentMedia.type === 'image' ? (
-            <img
-              src={currentMedia.mediaUrl}
-              alt={currentMedia.title || ''}
-              className="max-w-full max-h-full object-contain select-none"
-            />
+            <div className="flex items-center justify-center w-full h-full">
+              <img
+                src={currentMedia.mediaUrl}
+                alt={currentMedia.title || ''}
+                className="select-none transition-transform duration-300"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: fitMode,
+                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                }}
+              />
+            </div>
           ) : (
-            <video
-              ref={videoRef}
-              src={currentMedia.mediaUrl}
-              className="max-w-full max-h-full object-contain select-none"
-              controls
-              autoPlay={false}
-              onClick={() => setIsPlaying(!isPlaying)}
-            />
+            <div className="flex items-center justify-center w-full h-full">
+              <video
+                ref={videoRef}
+                src={currentMedia.mediaUrl}
+                className="select-none transition-transform duration-300"
+                style={{
+                  maxWidth: '100%',
+                  maxHeight: '100%',
+                  objectFit: fitMode,
+                  transform: `scale(${zoom})`,
+                }}
+                onLoadedMetadata={(e) => {
+                  setVideoDuration(e.currentTarget.duration)
+                }}
+                onTimeUpdate={(e) => {
+                  setVideoCurrentTime(e.currentTarget.currentTime)
+                }}
+              />
+            </div>
           )}
         </motion.div>
       </AnimatePresence>
@@ -170,30 +253,78 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
           >
+            {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
             >
               <X className="w-6 h-6 text-white" />
             </button>
 
-            {media.length > 1 && (
+            {/* Presentation button (below close) */}
+            {currentMedia.type === 'image' && (
+              <button
+                onClick={() => setIsSlideshow(!isSlideshow)}
+                className="absolute top-20 right-4 sm:top-24 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+                title="Presentación"
+              >
+                <Film className="w-6 h-6 text-white" />
+              </button>
+            )}
+
+            {/* Image controls (image only) */}
+            {currentMedia.type === 'image' && (
               <>
+                {/* Rotate button */}
                 <button
-                  onClick={goPrev}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+                  onClick={() => setRotation((r) => (r + 90) % 360)}
+                  className="absolute top-4 left-4 sm:top-6 sm:left-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+                  title="Rotar"
                 >
-                  <ChevronLeft className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                  <RotateCw className="w-6 h-6 text-white" />
                 </button>
+
+                {/* Zoom button */}
                 <button
-                  onClick={goNext}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-3 sm:p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors"
+                  onClick={() => setZoom((z) => (z === 1 ? 1.5 : 1))}
+                  className="absolute top-20 left-4 sm:top-24 sm:left-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+                  title="Zoom"
                 >
-                  <ChevronRight className="w-6 h-6 sm:w-8 sm:h-8 text-white" />
+                  <ZoomIn className="w-6 h-6 text-white" />
+                </button>
+
+                {/* Fit button */}
+                <button
+                  onClick={() =>
+                    setFitMode((mode) => (mode === 'contain' ? 'cover' : 'contain'))
+                  }
+                  className="absolute top-36 left-4 sm:top-44 sm:left-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+                  title="Ajustar"
+                >
+                  <Maximize className="w-6 h-6 text-white" />
                 </button>
               </>
             )}
 
+            {/* Navigation buttons */}
+            {media.length > 1 && (
+              <>
+                <button
+                  onClick={goPrev}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  <ChevronLeft className="w-8 h-8 text-white" />
+                </button>
+                <button
+                  onClick={goNext}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                >
+                  <ChevronRight className="w-8 h-8 text-white" />
+                </button>
+              </>
+            )}
+
+            {/* Bottom info */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 sm:p-6">
               <div className="flex items-center justify-between max-w-4xl mx-auto">
                 <div>
@@ -209,20 +340,110 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
               </div>
             </div>
 
+            {/* Thumbnails indicator */}
             {media.length > 1 && media.length <= 20 && (
               <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-1.5">
                 {media.map((_, idx) => (
                   <button
                     key={idx}
-                    onClick={() => setCurrentIndex(idx)}
+                    onClick={() => {
+                      setCurrentIndex(idx)
+                      setRotation(0)
+                      setFitMode('contain')
+                      setZoom(1)
+                      setIsVideoPlaying(false)
+                      setVideoCurrentTime(0)
+                    }}
                     className={cn(
-                      "w-2 h-2 rounded-full transition-all",
+                      'w-2 h-2 rounded-full transition-all cursor-pointer',
                       idx === currentIndex
-                        ? "bg-white w-4"
-                        : "bg-white/40 hover:bg-white/60"
+                        ? 'bg-white w-4'
+                        : 'bg-white/40 hover:bg-white/60'
                     )}
                   />
                 ))}
+              </div>
+            )}
+
+            {/* Video controls */}
+            {currentMedia.type === 'video' && (
+              <div className="absolute bottom-4 sm:bottom-6 left-4 right-4 sm:left-6 sm:right-6 z-20 max-w-4xl mx-auto">
+                {/* Timeline */}
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-white/60 text-xs">
+                    {Math.floor(videoCurrentTime)}s
+                  </span>
+                  <input
+                    type="range"
+                    min="0"
+                    max={videoDuration || 0}
+                    value={videoCurrentTime}
+                    onChange={handleTimelineChange}
+                    className="flex-1 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                  />
+                  <span className="text-white/60 text-xs">
+                    {Math.floor(videoDuration)}s
+                  </span>
+                </div>
+
+                {/* Controls: rewind, play, forward */}
+                <div className="flex items-center justify-center gap-4 mb-4">
+                  <button
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = Math.max(
+                          0,
+                          videoRef.current.currentTime - 5
+                        )
+                      }
+                    }}
+                    className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                    title="Retroceder 5s"
+                  >
+                    <SkipBack className="w-6 h-6 text-white" />
+                  </button>
+
+                  <button
+                    onClick={() => setIsVideoPlaying(!isVideoPlaying)}
+                    className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer"
+                    title={isVideoPlaying ? 'Pausar' : 'Reproducir'}
+                  >
+                    {isVideoPlaying ? (
+                      <Pause className="w-7 h-7 text-white" />
+                    ) : (
+                      <Play className="w-7 h-7 text-white" />
+                    )}
+                  </button>
+
+                  <button
+                    onClick={() => {
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = Math.min(
+                          videoDuration,
+                          videoRef.current.currentTime + 5
+                        )
+                      }
+                    }}
+                    className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                    title="Avanzar 5s"
+                  >
+                    <SkipForward className="w-6 h-6 text-white" />
+                  </button>
+                </div>
+
+                {/* Volume control */}
+                <div className="flex items-center justify-end gap-2">
+                  <Volume2 className="w-5 h-5 text-white/60" />
+                  <input
+                    type="range"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={videoVolume}
+                    onChange={(e) => setVideoVolume(parseFloat(e.target.value))}
+                    className="w-24 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                  />
+                </div>
               </div>
             )}
           </motion.div>
