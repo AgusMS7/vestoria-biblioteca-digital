@@ -138,11 +138,11 @@ export function AlbumCard({ album, index }: AlbumCardProps) {
               >
                 {album.title}
               </h3>
-              <p 
+              <p
                 className="text-[10px] sm:text-xs mt-0.5 relative z-10"
                 style={{ color: colors.textMuted }}
               >
-                {album.mediaCount} fotos &middot; {album.year}
+                {album.mediaCount} fotos
               </p>
             </div>
           </div>
