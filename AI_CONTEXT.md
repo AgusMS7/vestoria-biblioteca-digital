@@ -202,7 +202,87 @@ getMediaType()       // Detecta si es 'image' o 'video'
 
 **Runtime:** Explícitamente `export const runtime = "nodejs"` (no Edge)
 
+### `/api/media/[id]` (GET) - NUEVO
+
+**Propósito:** Servir archivos multimedia (imágenes y videos) desde Google Drive.
+
+**Parámetros:**
+- `id`: ID del archivo en Google Drive
+
+**Comportamiento:**
+- Obtiene metadatos del archivo (MIME type, nombre)
+- Redirige a `webContentLink` de Google Drive (sin proxying)
+- Establece headers de caché agresivo (1 año, immutable)
+- Habilita CORS
+
+**Response (éxito):**
+```
+HTTP/1.1 302 Found
+Location: https://drive.google.com/uc?id=...
+Cache-Control: public, max-age=31536000, immutable
+Access-Control-Allow-Origin: *
+```
+
+**Response (error):**
+```json
+{
+  "error": "File not found"
+}
+```
+
+### `/api/media/[id]/thumbnail` (GET) - NUEVO
+
+**Propósito:** Servir miniaturas optimizadas de archivos multimedia.
+
+**Parámetros:**
+- `id`: ID del archivo en Google Drive
+- `size` (query): `small` (200px, por defecto), `medium` (400px), `large` (800px)
+
+**Comportamiento:**
+- Obtiene thumbnail desde Google Drive metadata
+- Modifica URL de thumbnail para solicitar dimensión específica
+- Devuelve JPEG comprimido
+- Caché de 1 año
+
+**Response (éxito):**
+```
+HTTP/1.1 200 OK
+Content-Type: image/jpeg
+Cache-Control: public, max-age=31536000, immutable
+[imagen JPEG binaria]
+```
+
+**Response (error):**
+```json
+{
+  "error": "Failed to serve thumbnail"
+}
+```
+
+### Otras APIs Existentes
+
+- `/api/categories` (GET) - Lista todas las categorías
+- `/api/categories/[id]/albums` (GET) - Lista álbumes de una categoría
+- `/api/albums/[id]` (GET) - Obtiene un álbum específico con su media completa
+- `/api/albums/[id]/media` (GET) - Lista media de un álbum
+
 ---
+
+### Análisis: Streaming vs. Buffer Completo
+
+**Decisión**: Mantener buffer completo (actual), no `ReadableStream` por ahora.
+
+**Razón**:
+- Google Drive API retorna `stream` que debe consumirse completamente
+- Next.js Response API requiere `BodyInit` (que incluye Buffer)
+- `ReadableStream` sería más complejo sin beneficio real para archivos típicos
+- Archivos de imágenes/videos son generalmente < 50 MB en biblioteca digital personal
+- Buffer en memoria es más simple y predecible
+
+**Si escalamos a archivos > 100 MB**:
+- Implementar streaming real con `ReadableStream`
+- Usar `transformer` para comprimir mientras se descarga
+- Implementar `Content-Range` para descargas resumibles
 
 ## 🔒 Seguridad y Consideraciones
 
@@ -323,25 +403,29 @@ export interface Category {
 }
 ```
 
-### Media (`src/types/media.ts`)
+### Media (`src/types/media.ts`) - ACTUALIZADO
 
 ```typescript
 export interface Media {
-  id: string
-  type: 'image' | 'video'
-  src: string
-  thumbnail?: string
-  title?: string
-  date?: string
-  fileName: string
+  id: string                    # ID del archivo en Google Drive
+  type: 'image' | 'video'      # Tipo de contenido multimedia
+  fileName: string              # Nombre original del archivo
+  title?: string               # Título (por ahora, igual a fileName)
+  date?: string                # Fecha de captura (futuro)
+  width: number                # Ancho en píxeles
+  height: number               # Alto en píxeles
+  duration?: number            # Duración en segundos (solo videos)
+  thumbnailUrl: string         # URL a /api/media/[id]/thumbnail
+  mediaUrl: string             # URL a /api/media/[id]
 }
 ```
 
-**Notas sobre refactoring:**
-- `Media` reemplaza el anterior `MediaItem`
-- Alias de compatibilidad: `export { Media as MediaItem }`
-- Se eliminó archivo obsoleto `src/types/albums.ts`
-- Modelos internos NUNCA exponen directamente datos de Google Drive
+**Cambios en esta fase:**
+- Reemplazó `src` y `thumbnail` con `mediaUrl` y `thumbnailUrl` (URLs a APIs propias)
+- Agregó dimensiones `width` y `height` desde Google Drive metadata
+- Agregó `duration` para videos
+- Eliminó dependencia de URLs de Google Drive públicas
+- Todos los archivos ahora se sirven a través de `/api/media/` (permite proxying futuro)
 
 ---
 
@@ -530,6 +614,123 @@ Debería retornar JSON con éxito.
 
 ---
 
+## 🎨 Cambios en la Interfaz de Usuario (Fase Multimedia)
+
+### Página Principal (/)
+
+**Cambios realizados:**
+1. ✅ Removido selector "Agrupar por Año/Categoría"
+2. ✅ Removido buscador "Buscar recuerdos..."
+3. ✅ Navegación ahora **solo por categorías**
+4. ✅ Header simplificado mostrando solo el título
+
+**Antes:**
+```
+Header
+├── Título: "Biblioteca Rosana"
+├── Buscador: "Buscar recuerdos..."
+└── Selector: "Agrupar por" (Por Año / Por Categoría)
+
+Contenido
+├── Estantería por Año (2026)
+│   └── Tarjetas de álbumes
+└── Estantería por Año (2025)
+    └── Tarjetas de álbumes
+```
+
+**Ahora:**
+```
+Header
+└── Título: "Biblioteca Rosana" (centrado)
+
+Contenido
+├── Estantería "Categoría 1"
+│   └── Tarjetas de álbumes
+├── Estantería "Categoría 2"
+│   └── Tarjetas de álbumes
+└── Estantería "Categoría 3"
+    └── Tarjetas de álbumes
+```
+
+### Página de Álbum (/album/[id])
+
+**Cambios realizados:**
+1. ✅ Grilla usa `thumbnailUrl` de API en lugar de URLs directas de Google Drive
+2. ✅ Implementado lazy loading con `IntersectionObserver`
+3. ✅ Las imágenes fuera de pantalla NO se cargan
+4. ✅ Margen de previsualización: 100px (carga imágenes próximas a entrar en pantalla)
+5. ✅ Componente `PolaroidPhoto` ahora es más eficiente
+
+**Optimizaciones:**
+```typescript
+// Antes: Todas las imágenes se cargaban
+<img src={album.coverImage} loading="lazy" />
+
+// Ahora: Solo imágenes visibles
+const [isVisible, setIsVisible] = useState(false)
+
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    ([entry]) => {
+      if (entry.isIntersecting) {
+        setIsVisible(true)
+        observer.unobserve(entry.target)
+      }
+    },
+    { rootMargin: '100px' }
+  )
+  observer.observe(ref.current)
+}, [])
+
+{isVisible && <img src={thumbnailUrl} />}
+```
+
+### Visor a Pantalla Completa
+
+**Características implementadas:**
+1. ✅ Abre en pantalla completa (fondo negro)
+2. ✅ Imagen/video centrado
+3. ✅ Navegación lateral (flechas)
+4. ✅ Swipe táctil (detecta y navega)
+5. ✅ Videos con controles nativos
+6. ✅ **Precargas inteligentes**: carga anterior, actual, siguiente
+7. ✅ Cambio de media es instantáneo
+
+**Precarga de media:**
+```typescript
+// Se precarga automáticamente:
+// - mediaUrl del índice anterior
+// - mediaUrl del índice actual
+// - mediaUrl del índice siguiente
+
+useEffect(() => {
+  const indicesToPreload = [
+    currentIndex - 1,
+    currentIndex,
+    currentIndex + 1,
+  ].filter((idx) => idx >= 0 && idx < media.length)
+
+  indicesToPreload.forEach((idx) => {
+    const m = media[idx]
+    if (m.type === 'image') {
+      const img = new Image()
+      img.onload = () => {
+        setPreloadedImages((prev) => ({ ...prev, [m.id]: true }))
+      }
+      img.src = m.mediaUrl
+    }
+  })
+}, [currentIndex, media, preloadedImages])
+```
+
+**Controles:**
+- **Navegación**: Flechas ← →
+- **Cerrar**: Esc o botón X
+- **Swipe**: Deslizar izquierda (siguiente) o derecha (anterior)
+- **Videos**: Controles nativos del navegador (sin autoplay)
+
+---
+
 ## 📋 Reglas para Agregar Funcionalidades
 
 ### Regla 1: Respeta las Capas
@@ -636,5 +837,157 @@ Este proyecto está diseñado para ser **mantenible, escalable y fácil de enten
 
 ---
 
-**Última actualización:** Enero 2025  
-**Versión del documento:** 1.0.0
+## 🚀 Próximas Mejoras Planeadas
+
+### Fase 6: Optimizaciones Avanzadas
+- [ ] Implementar proxying real de media (en lugar de redirect)
+- [ ] Caché de miniaturas en servidor
+- [ ] Compresión de imágenes bajo demanda (WebP)
+- [ ] Análisis de color dominante de portadas (para colores temáticos)
+
+### Fase 7: Slideshow
+- [ ] Modo presentación automática
+- [ ] Transiciones suaves entre imágenes
+- [ ] Buffer rotativo de precarga
+- [ ] Control de duración por slide
+
+### Fase 8: Búsqueda y Filtros
+- [ ] Búsqueda full-text en nombres de archivos
+- [ ] Filtro por tipo (solo imágenes, solo videos)
+- [ ] Filtro por rango de fechas (futuro)
+
+### Fase 9: Compartir y Exportar
+- [ ] URLs públicas para compartir álbumes individuales
+- [ ] Descarga de álbum completo (ZIP)
+- [ ] Descarga de fotos individuales
+
+### Fase 10: PWA y Offline
+- [ ] Progressive Web App
+- [ ] Service Worker para caché offline
+- [ ] Sincronización en background
+
+---
+
+## 🔧 Mejoras Implementadas (Iteración 3)
+
+### Optimizaciones de Rendimiento
+
+#### 1. Thumbnails Realmente Optimizadas
+- Implementación en dos niveles:
+  1. **Primary**: Usa `thumbnailLink` de Google Drive (5-20 KB típicamente)
+  2. **Fallback**: Comprime localmente con `sharp` (200x200 a 800x800 px)
+- Compresión JPEG con calidad 80% y Progressive encoding
+- Resultado: thumbnails ~10-50 KB vs imágenes originales de varios MB
+
+#### 2. Caché de Thumbnails en Memoria
+- `Map<string, Buffer>` con clave `{fileId}_{size}`
+- Máximo 100 entradas (LRU simple)
+- Evita regeneraciones repetidas
+- Funciona con streaming interno
+
+#### 3. Lazy Loading Mejorado
+- `IntersectionObserver` con `rootMargin: 300px`
+- Precarga imágenes 300px antes de entrar en pantalla
+- Scroll suave sin saltos visuales
+- Componentes HTML reducen-se hasta ser visibles
+
+#### 4. Búsqueda Mejorada
+- Búsqueda en tiempo real en categorías y álbumes
+- Case-insensitive
+- Filtra estantería completa reactivamente
+- Sin peticiones adicionales (client-side puro)
+
+#### 5. Ordenamiento Elegante
+- Botón A↔Z integrado en Header
+- Toggle entre ascendente y descendente
+- Usa `localeCompare()` para orden alfabético español
+- Respeta números naturales (IMG_2 antes que IMG_10)
+
+#### 6. Thumbnails para Vídeos
+- Si `thumbnailLink` existe: úsalo
+- Si no: retorna 204 No Content
+- Cliente muestra placeholder elegante con icono de reproducción
+- Nunca espacios vacíos en grilla
+
+## 🔧 Correcciones Realizadas (Iteración 2)
+
+### Problema Identificado
+Las imágenes no se mostraban porque:
+1. La ruta `/api/media/[id]` estaba usando redirect a `webContentLink`, que no funciona para visualización
+2. Las portadas estaban usando URLs directas de Google Drive en lugar de nuestras APIs
+3. El streaming no era real, solo redireccionaba
+
+### Soluciones Implementadas
+
+#### 1. Streaming Real en `/api/media/[id]`
+- Cambio: De redirect a streaming real
+- Implementa Promise-based streaming que carga el buffer completo
+- Retorna Content-Type correcto y headers de caché
+- Elimina problemas de CORS
+
+#### 2. Thumbnails Mejorado
+- Intenta usar `thumbnailLink` de Google Drive primero
+- Si no disponible, sirve el archivo completo (navegador lo escala)
+- Soporta parámetro `size` para optimizar ancho de banda
+- Fallback a streaming real
+
+#### 3. Corrección de URLs de Portadas
+- **Antes**: `https://drive.google.com/uc?id=${fileId}`
+- **Ahora**: `/api/media/${fileId}/thumbnail`
+- Las portadas ahora pasan por nuestro API
+
+#### 4. Restauración de Búsqueda
+- Restaurada barra de búsqueda en Header
+- Busca en tiempo real en categorías y álbumes
+- Completamente en cliente (sin backend)
+- Selector "Categoría/Año" sigue eliminado
+
+### Archivos Modificados
+- `src/app/api/media/[id]/route.ts` - Streaming real
+- `src/app/api/media/[id]/thumbnail/route.ts` - Thumbnails mejorado
+- `src/lib/google-drive/service.ts` - URLs de portadas
+- `src/components/layout/Header.tsx` - Búsqueda restaurada
+- `src/app/page.tsx` - Lógica de búsqueda
+- `README.md` - Actualización de documentación
+
+## 🔧 Agrupación Cronológica en Álbumes (Iteración 4)
+
+### Implementación
+
+#### Extracción Inteligente de Años
+- **Archivo**: `src/lib/google-drive/date-extractor.ts`
+- **Función**: `extractYearFromMetadata()` - usa metadatos sin buffer
+- **Función**: `extractYearFromMedia()` - puede leer EXIF si se descarga buffer
+- **Prioridades**:
+  1. EXIF DateTimeOriginal (para imágenes)
+  2. Metadata de vídeo
+  3. Patrón inequívoco en nombre (20\d{2})
+  4. createdTime de Google Drive
+  5. modifiedTime de Google Drive
+
+#### Cambios en Mapper
+- `mapToMediaItem()` ahora extrae `year` usando `extractYearFromMetadata()`
+- Se pasan `createdTime` y `modifiedTime` desde Google Drive
+- Campo `year?: number` agregado a tipo `Media`
+
+#### Cambios en Service
+- Solicitudes a Google Drive incluyen `createdTime, modifiedTime`
+- Estos datos se pasan al mapper para análisis
+
+#### Cambios en Componente de Álbum
+- Agrupación `useMemo` de medios por año
+- Grupo sin año (`year === null`) siempre al final
+- Ordenamiento ascendente/descendente de grupos
+- Selector de ordenamiento en header (A↔Z para años)
+- Encabezado sutil (`border-b dashed`) para cada grupo de año
+
+### Validación
+- ✅ Compilación exitosa
+- ✅ Sin cambios en arquitectura
+- ✅ Lazy loading preservado
+- ✅ Precarga en visor intacta
+- ✅ No se descarga data innecesaria (todo client-side)
+
+**Última actualización:** Enero 2025
+**Versión del documento:** 1.3.0
+**Última fase completada:** Agrupación Cronológica (Iteración 4)

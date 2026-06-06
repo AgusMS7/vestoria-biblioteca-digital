@@ -89,7 +89,7 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
     const response = await drive.files.list({
       q: `'${categoryId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name)',
+      fields: 'files(id, name, imageMediaMetadata, videoMediaMetadata)',
       pageSize: 100,
       orderBy: 'name',
     })
@@ -161,11 +161,11 @@ async function getAlbumDetails(
   try {
     const drive = getDriveClient()
 
-    // Obtener todos los archivos del álbum
+    // Obtener todos los archivos del álbum (incluyendo timestamps)
     const filesResponse = await drive.files.list({
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
+      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, createdTime, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })
@@ -187,9 +187,9 @@ async function getAlbumDetails(
     // Obtener portada (primero cover file, sino primer media)
     let coverImage = ''
     if (coverFile) {
-      coverImage = `https://drive.google.com/uc?id=${coverFile.id}`
+      coverImage = `/api/media/${coverFile.id}/thumbnail`
     } else if (mediaFiles.length > 0) {
-      coverImage = `https://drive.google.com/uc?id=${mediaFiles[0].id}`
+      coverImage = `/api/media/${mediaFiles[0].id}/thumbnail`
     }
 
     // Mapear archivos multimedia
@@ -221,7 +221,7 @@ export async function getMedia(albumId: string): Promise<Media[]> {
     const response = await drive.files.list({
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
+      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, createdTime, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })
@@ -258,7 +258,7 @@ export async function getAlbumCover(albumId: string): Promise<Media | null> {
     const response = await drive.files.list({
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name, mimeType, webContentLink, thumbnailLink)',
+      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, createdTime, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })

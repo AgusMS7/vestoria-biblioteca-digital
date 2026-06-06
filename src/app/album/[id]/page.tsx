@@ -1,11 +1,13 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play } from 'lucide-react'
+import { ArrowLeft, Play, Calendar, ArrowUp, ArrowDown } from 'lucide-react'
 import { FullscreenViewer, TextureFilters } from '@/components'
-import type { Album } from '@/types'
+import type { Album, Media } from '@/types'
+
+type YearSortOrder = 'asc' | 'desc'
 
 function getAlbumPageColors(color: { h: number; s: number; l: number }) {
   const { h, s, l } = color
@@ -112,15 +114,36 @@ function PolaroidPhoto({
   index,
   onClick,
 }: {
-  item: { id: string; thumbnail?: string; title?: string; type: string }
+  item: { id: string; thumbnailUrl: string; fileName: string; type: string }
   index: number
   onClick: () => void
 }) {
+  const [isVisible, setIsVisible] = useState(false)
+  const ref = useRef<HTMLButtonElement>(null)
   const tapeStyle = TAPE_STYLES[index % TAPE_STYLES.length]
   const rotation = ((index * 7) % 9) - 4
 
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setIsVisible(true)
+          observer.unobserve(entry.target)
+        }
+      },
+      { rootMargin: '300px' }
+    )
+
+    if (ref.current) {
+      observer.observe(ref.current)
+    }
+
+    return () => observer.disconnect()
+  }, [])
+
   return (
     <motion.button
+      ref={ref}
       initial={{ opacity: 0, scale: 0.9, rotate: rotation - 3 }}
       animate={{ opacity: 1, scale: 1, rotate: rotation }}
       transition={{ duration: 0.4, delay: index * 0.04 }}
@@ -140,17 +163,29 @@ function PolaroidPhoto({
         <AdhesiveTape style={tapeStyle} />
         {(tapeStyle as any).dual && <AdhesiveTape style={tapeStyle} isSecond />}
 
-        <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <img
-            src={item.thumbnail || item.id}
-            alt={item.title || `Foto ${index + 1}`}
-            loading="lazy"
-            className="w-full h-full object-cover"
-          />
+        <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
+          {isVisible ? (
+            <img
+              src={item.thumbnailUrl}
+              alt={item.fileName}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                // Si falla la imagen, mostrar placeholder
+                const img = e.target as HTMLImageElement
+                img.style.display = 'none'
+              }}
+            />
+          ) : (
+            <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
+              <div className="text-gray-400 text-sm">Cargando...</div>
+            </div>
+          )}
 
           {item.type === 'video' && (
-            <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-sm">
-              <Play className="w-3 h-3 text-white fill-white" />
+            <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+              <div className="p-3 rounded-full bg-white/80 backdrop-blur-sm shadow-lg">
+                <Play className="w-5 h-5 text-gray-800 fill-gray-800" />
+              </div>
             </div>
           )}
         </div>
@@ -228,6 +263,51 @@ export default function AlbumPage() {
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(0)
   const [viewerAutoPlay, setViewerAutoPlay] = useState(false)
+  const [yearSortOrder, setYearSortOrder] = useState<YearSortOrder>('desc')
+
+  // Agrupar medios por año - DEBE estar antes de los early returns
+  interface MediaGroup {
+    year: number | null
+    medios: Media[]
+  }
+
+  const groupedByYear = useMemo(() => {
+    if (!album) return []
+
+    const groups: Map<number | null, Media[]> = new Map()
+
+    // Agrupar
+    album.media.forEach((media) => {
+      const year = media.year ?? null
+      if (!groups.has(year)) {
+        groups.set(year, [])
+      }
+      groups.get(year)!.push(media)
+    })
+
+    // Convertir a array y ordenar
+    let sorted = Array.from(groups.entries())
+      .map(([year, medios]) => ({ year, medios }))
+
+    // Separar grupo sin año
+    const noYearGroup = sorted.find((g) => g.year === null)
+    const withYearGroups = sorted.filter((g) => g.year !== null)
+
+    // Ordenar grupos con año
+    withYearGroups.sort((a, b) => {
+      const aYear = a.year ?? 0
+      const bYear = b.year ?? 0
+      return yearSortOrder === 'asc' ? aYear - bYear : bYear - aYear
+    })
+
+    // Reconstruir array (sin año siempre al final)
+    const result = [...withYearGroups]
+    if (noYearGroup) {
+      result.push(noYearGroup)
+    }
+
+    return result
+  }, [album, yearSortOrder])
 
   useEffect(() => {
     const loadAlbum = async () => {
@@ -295,6 +375,10 @@ export default function AlbumPage() {
     setViewerOpen(true)
   }
 
+  const toggleYearSort = () => {
+    setYearSortOrder(yearSortOrder === 'asc' ? 'desc' : 'asc')
+  }
+
   return (
     <div className="min-h-screen paper-background">
       <TextureFilters />
@@ -357,29 +441,55 @@ export default function AlbumPage() {
               </div>
             </div>
 
-            <button
-              onClick={startSlideshow}
-              className="plastic-button flex items-center gap-2 px-4 py-2"
-              style={{
-                '--btn-hue': colors.buttonHue,
-                '--btn-sat': `${colors.buttonSat}%`,
-                '--btn-light': `${colors.buttonLight}%`,
-              } as React.CSSProperties}
-            >
-              <Play
-                className="w-4 h-4"
+            <div className="flex items-center gap-3">
+              <button
+                onClick={toggleYearSort}
+                className="plastic-button flex items-center gap-2 px-4 py-2"
                 style={{
-                  color: colors.playBtnText,
-                  fill: colors.playBtnText,
-                }}
-              />
-              <span
-                className="hidden sm:inline font-semibold text-sm"
-                style={{ color: colors.playBtnText }}
+                  '--btn-hue': colors.buttonHue,
+                  '--btn-sat': `${colors.buttonSat}%`,
+                  '--btn-light': `${colors.buttonLight}%`,
+                } as React.CSSProperties}
+                title={yearSortOrder === 'desc' ? 'Ordenar: Más recientes primero' : 'Ordenar: Más antiguos primero'}
               >
-                Presentación
-              </span>
-            </button>
+                <Calendar
+                  className="w-4 h-4"
+                  style={{
+                    color: colors.playBtnText,
+                  }}
+                />
+                <span
+                  className="hidden sm:inline font-semibold text-sm"
+                  style={{ color: colors.playBtnText }}
+                >
+                  {yearSortOrder === 'desc' ? 'Recientes' : 'Antiguos'}
+                </span>
+              </button>
+
+              <button
+                onClick={startSlideshow}
+                className="plastic-button flex items-center gap-2 px-4 py-2"
+                style={{
+                  '--btn-hue': colors.buttonHue,
+                  '--btn-sat': `${colors.buttonSat}%`,
+                  '--btn-light': `${colors.buttonLight}%`,
+                } as React.CSSProperties}
+              >
+                <Play
+                  className="w-4 h-4"
+                  style={{
+                    color: colors.playBtnText,
+                    fill: colors.playBtnText,
+                  }}
+                />
+                <span
+                  className="hidden sm:inline font-semibold text-sm"
+                  style={{ color: colors.playBtnText }}
+                >
+                  Presentación
+                </span>
+              </button>
+            </div>
           </div>
         </div>
 
@@ -406,15 +516,61 @@ export default function AlbumPage() {
               <p>No hay archivos multimedia en este álbum</p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
-              {album.media.map((item, index) => (
-                <PolaroidPhoto
-                  key={item.id}
-                  item={item}
-                  index={index}
-                  onClick={() => openViewer(index)}
-                />
-              ))}
+            <div className="space-y-12 sm:space-y-16">
+              {groupedByYear.map((group, groupIdx) => {
+                let globalIndex = 0
+                // Calcular índice global de este grupo
+                for (let i = 0; i < groupIdx; i++) {
+                  globalIndex += groupedByYear[i].medios.length
+                }
+
+                return (
+                  <motion.section
+                    key={group.year ?? 'no-year'}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.4, delay: groupIdx * 0.1 }}
+                  >
+                    {/* Encabezado de año */}
+                    {group.year !== null && (
+                      <div className="mb-10 relative">
+                        <h2
+                          className="text-3xl sm:text-4xl font-light tracking-wide relative inline-block"
+                          style={{
+                            color: colors.subtitleColor,
+                            fontFamily: "'Georgia', var(--font-serif)",
+                            fontStyle: 'italic',
+                            textShadow: '0 1px 0 rgba(0,0,0,0.05)',
+                          }}
+                        >
+                          {group.year}
+                        </h2>
+                        <div
+                          className="absolute bottom-0 left-0 h-px mt-1"
+                          style={{
+                            width: `${String(group.year).length * 28}px`,
+                            background: `linear-gradient(90deg, ${colors.subtitleColor} 0%, ${colors.subtitleColor}80 100%)`,
+                            opacity: 0.4,
+                            filter: 'skewY(-1deg)',
+                          }}
+                        />
+                      </div>
+                    )}
+
+                    {/* Grilla de medios */}
+                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
+                      {group.medios.map((item, idx) => (
+                        <PolaroidPhoto
+                          key={item.id}
+                          item={item}
+                          index={globalIndex + idx}
+                          onClick={() => openViewer(globalIndex + idx)}
+                        />
+                      ))}
+                    </div>
+                  </motion.section>
+                )
+              })}
             </div>
           )}
         </div>

@@ -2,12 +2,12 @@
 
 import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { X, ChevronLeft, ChevronRight, Play, Pause, Volume2, VolumeX } from 'lucide-react'
+import { X, ChevronLeft, ChevronRight, Play, Pause } from 'lucide-react'
 import { cn } from '@/lib'
-import type { MediaItem } from '@/types'
+import type { Media } from '@/types'
 
 interface FullscreenViewerProps {
-  media: MediaItem[]
+  media: Media[]
   initialIndex: number
   autoPlay?: boolean
   onClose: () => void
@@ -17,12 +17,32 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [showControls, setShowControls] = useState(true)
   const [isPlaying, setIsPlaying] = useState(false)
-  const [isMuted, setIsMuted] = useState(false)
   const [controlsTimeout, setControlsTimeout] = useState<ReturnType<typeof setTimeout> | null>(null)
   const [touchStart, setTouchStart] = useState<number | null>(null)
+  const [preloadedImages, setPreloadedImages] = useState<Record<string, boolean>>({})
   const videoRef = useRef<HTMLVideoElement>(null)
 
   const currentMedia = media[currentIndex]
+
+  // Preload adjacent images for faster navigation
+  useEffect(() => {
+    const indicesToPreload = [
+      currentIndex - 1,
+      currentIndex,
+      currentIndex + 1,
+    ].filter((idx) => idx >= 0 && idx < media.length)
+
+    indicesToPreload.forEach((idx) => {
+      const m = media[idx]
+      if (m.type === 'image' && !preloadedImages[m.id]) {
+        const img = new Image()
+        img.onload = () => {
+          setPreloadedImages((prev) => ({ ...prev, [m.id]: true }))
+        }
+        img.src = m.mediaUrl
+      }
+    })
+  }, [currentIndex, media, preloadedImages])
 
   const hideControlsAfterDelay = useCallback(() => {
     if (controlsTimeout) clearTimeout(controlsTimeout)
@@ -125,18 +145,17 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
         >
           {currentMedia.type === 'image' ? (
             <img
-              src={currentMedia.src}
+              src={currentMedia.mediaUrl}
               alt={currentMedia.title || ''}
-              className="max-w-full max-h-full object-contain"
+              className="max-w-full max-h-full object-contain select-none"
             />
           ) : (
             <video
               ref={videoRef}
-              src={currentMedia.src}
-              className="max-w-full max-h-full object-contain"
-              controls={false}
+              src={currentMedia.mediaUrl}
+              className="max-w-full max-h-full object-contain select-none"
+              controls
               autoPlay={false}
-              muted={isMuted}
               onClick={() => setIsPlaying(!isPlaying)}
             />
           )}
@@ -180,38 +199,13 @@ export function FullscreenViewer({ media, initialIndex, autoPlay = false, onClos
                 <div>
                   {currentMedia.title && (
                     <h3 className="text-white text-lg sm:text-xl font-medium mb-1">
-                      {currentMedia.title}
+                      {currentMedia.fileName}
                     </h3>
                   )}
                   <p className="text-white/60 text-sm">
                     {currentIndex + 1} de {media.length}
                   </p>
                 </div>
-
-                {currentMedia.type === 'video' && (
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setIsPlaying(!isPlaying)}
-                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      {isPlaying ? (
-                        <Pause className="w-5 h-5 text-white" />
-                      ) : (
-                        <Play className="w-5 h-5 text-white fill-white" />
-                      )}
-                    </button>
-                    <button
-                      onClick={() => setIsMuted(!isMuted)}
-                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 transition-colors"
-                    >
-                      {isMuted ? (
-                        <VolumeX className="w-5 h-5 text-white" />
-                      ) : (
-                        <Volume2 className="w-5 h-5 text-white" />
-                      )}
-                    </button>
-                  </div>
-                )}
               </div>
             </div>
 

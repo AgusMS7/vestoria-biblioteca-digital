@@ -1,4 +1,5 @@
 import type { Album } from '@/types/album'
+import { extractYearFromMetadata } from './date-extractor'
 import type { Media } from '@/types/media'
 import type { Category } from '@/types/category'
 
@@ -12,6 +13,10 @@ export function mapToMediaItem(
   const id = driveFile?.id
   const name = driveFile?.name
   const mimeType = driveFile?.mimeType
+  const imageMediaMetadata = driveFile?.imageMediaMetadata
+  const videoMediaMetadata = driveFile?.videoMediaMetadata
+  const createdTime = driveFile?.createdTime
+  const modifiedTime = driveFile?.modifiedTime
 
   if (!id || !name || !mimeType) {
     return null
@@ -22,14 +27,32 @@ export function mapToMediaItem(
     return null
   }
 
+  // Extract dimensions from metadata
+  let width = imageMediaMetadata?.width || videoMediaMetadata?.width || 1920
+  let height = imageMediaMetadata?.height || videoMediaMetadata?.height || 1080
+  let duration = videoMediaMetadata?.durationMillis
+    ? Math.round(videoMediaMetadata.durationMillis / 1000)
+    : undefined
+
+  // Ensure we have valid dimensions
+  width = Math.max(1, width || 1920)
+  height = Math.max(1, height || 1080)
+
+  // Extract year using priority order
+  const year = extractYearFromMetadata(name, createdTime, modifiedTime)
+
   return {
     id,
     type: mediaType,
-    src: driveFile.webContentLink || `https://drive.google.com/uc?id=${id}`,
-    thumbnail: driveFile.thumbnailLink || undefined,
-    title: name,
     fileName: name,
+    title: name,
     date: undefined,
+    year,
+    width,
+    height,
+    duration,
+    thumbnailUrl: `/api/media/${id}/thumbnail`,
+    mediaUrl: `/api/media/${id}`,
   }
 }
 

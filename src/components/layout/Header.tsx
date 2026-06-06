@@ -1,25 +1,28 @@
 'use client'
 
-import { useState } from 'react'
 import { motion } from 'framer-motion'
-import { Search, ChevronDown } from 'lucide-react'
+import { Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib'
 
-type GroupBy = 'year' | 'category'
+type SortOrder = 'asc' | 'desc'
 
 interface HeaderProps {
   searchQuery: string
   setSearchQuery: (query: string) => void
-  groupBy: GroupBy
-  setGroupBy: (groupBy: GroupBy) => void
+  sortOrder: SortOrder
+  setSortOrder: (order: SortOrder) => void
 }
 
 export function Header({
   searchQuery,
   setSearchQuery,
-  groupBy,
-  setGroupBy,
+  sortOrder,
+  setSortOrder,
 }: HeaderProps) {
+  const toggleSort = () => {
+    setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
+  }
+
   return (
     <motion.header
       initial={{ y: -20, opacity: 0 }}
@@ -49,7 +52,7 @@ export function Header({
               </h1>
             </motion.div>
 
-            <div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-xl lg:ml-8">
+            <div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-md">
               <div className="relative flex-1">
                 <div
                   className="absolute inset-0 rounded-sm"
@@ -64,7 +67,7 @@ export function Header({
                 />
                 <input
                   type="text"
-                  placeholder="Buscar recuerdos..."
+                  placeholder="Buscar categorías y álbumes..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className={cn(
@@ -79,29 +82,35 @@ export function Header({
                 />
               </div>
 
-              <div className="relative">
-                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                  <ChevronDown className="w-4 h-4 text-[hsl(35_45%_60%)]" />
-                </div>
-                <select
-                  value={groupBy}
-                  onChange={(event) => setGroupBy(event.target.value as GroupBy)}
-                  className={cn(
-                    'appearance-none px-4 py-2.5 rounded-sm w-full sm:w-auto',
-                    'transition-all duration-200 min-w-[160px]',
-                    'text-sm font-medium tracking-wide cursor-pointer pr-10',
-                    'wood-input'
-                  )}
-                  style={{
-                    color: 'hsl(35 45% 70%)',
-                    fontFamily: 'var(--font-serif)',
-                  }}
-                  aria-label="Agrupar por"
-                >
-                  <option value="year">Por Año</option>
-                  <option value="category">Por Categoría</option>
-                </select>
-              </div>
+              <motion.button
+                onClick={toggleSort}
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                className={cn(
+                  'flex items-center justify-center gap-2 px-3 py-2.5 rounded-sm',
+                  'text-sm font-medium tracking-wide cursor-pointer',
+                  'transition-all duration-200 relative z-10'
+                )}
+                style={{
+                  background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 24%, rgba(0,0,0,0.45) 100%)',
+                  boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -4px 10px rgba(0,0,0,0.65)',
+                  color: 'hsl(35 45% 70%)',
+                  fontFamily: 'var(--font-serif)',
+                }}
+                title={sortOrder === 'asc' ? 'Ordenar Z → A' : 'Ordenar A → Z'}
+              >
+                {sortOrder === 'asc' ? (
+                  <>
+                    <ArrowUp className="w-4 h-4" />
+                    <span className="hidden sm:inline text-xs">A-Z</span>
+                  </>
+                ) : (
+                  <>
+                    <ArrowDown className="w-4 h-4" />
+                    <span className="hidden sm:inline text-xs">Z-A</span>
+                  </>
+                )}
+              </motion.button>
             </div>
           </div>
         </div>

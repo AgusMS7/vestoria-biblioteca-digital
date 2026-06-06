@@ -5,9 +5,13 @@
 export interface Media {
   id: string
   type: 'image' | 'video'
-  src: string
-  thumbnail?: string
+  fileName: string
   title?: string
   date?: string
-  fileName: string
+  year?: number
+  width: number
+  height: number
+  duration?: number
+  thumbnailUrl: string
+  mediaUrl: string
 }

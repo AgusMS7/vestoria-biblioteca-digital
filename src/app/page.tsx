@@ -5,8 +5,6 @@ import { motion } from 'framer-motion'
 import { Header, AlbumCard, TextureFilters } from '@/components'
 import type { Category, Album } from '@/types'
 
-type GroupBy = 'year' | 'category'
-
 function WoodShelf({
   label,
   children,
@@ -62,40 +60,42 @@ function WoodShelf({
   )
 }
 
+type SortOrder = 'asc' | 'desc'
+
 export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('')
-  const [groupBy, setGroupBy] = useState<GroupBy>('year')
+  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
   const [categories, setCategories] = useState<Category[]>([])
-  const [allAlbums, setAllAlbums] = useState<Album[]>([])
+  const [categoryAlbums, setCategoryAlbums] = useState<Record<string, Album[]>>({})
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  // Cargar categorías y álbumes al montar el componente
+  // Load categories and albums on mount
   useEffect(() => {
     const loadData = async () => {
       try {
         setLoading(true)
         setError(null)
 
-        // Obtener categorías
+        // Get categories
         const categoriesRes = await fetch('/api/categories')
         if (!categoriesRes.ok) {
           throw new Error('Failed to load categories')
         }
         const categoriesData = await categoriesRes.json()
-        const cats = categoriesData.data || []
+        const cats = (categoriesData.data || []) as Category[]
         setCategories(cats)
 
-        // Obtener álbumes de cada categoría
-        const albumsArr: Album[] = []
+        // Get albums for each category
+        const albumsByCategory: Record<string, Album[]> = {}
         for (const category of cats) {
           const albumsRes = await fetch(`/api/categories/${category.id}/albums`)
           if (albumsRes.ok) {
             const albumsData = await albumsRes.json()
-            albumsArr.push(...(albumsData.data || []))
+            albumsByCategory[category.name] = (albumsData.data || []) as Album[]
           }
         }
-        setAllAlbums(albumsArr)
+        setCategoryAlbums(albumsByCategory)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Unknown error'
         setError(message)
@@ -108,44 +108,49 @@ export default function LibraryPage() {
     loadData()
   }, [])
 
-  const filteredAlbums = useMemo(() => {
-    return allAlbums.filter((album) => {
-      const matchesSearch =
-        album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        album.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCategories = useMemo(() => {
+    return categories.filter((cat) => {
+      const matchesSearch = cat.name
+        .toLowerCase()
+        .includes(searchQuery.toLowerCase())
       return matchesSearch
     })
-  }, [allAlbums, searchQuery])
+  }, [categories, searchQuery])
 
-  const albumsByYear = useMemo(() => {
-    const grouped: Record<number, Album[]> = {}
-    filteredAlbums.forEach((album) => {
-      if (!grouped[album.year]) grouped[album.year] = []
-      grouped[album.year].push(album)
+  const filteredAlbums = useMemo(() => {
+    const albums = Object.values(categoryAlbums).flat()
+    return albums.filter((album) => {
+      const matchesSearch =
+        album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        album.category.toLowerCase().includes(searchQuery.toLowerCase())
+      return matchesSearch
     })
-    return Object.entries(grouped)
-      .sort(([a], [b]) => Number(b) - Number(a))
-      .map(([year, yearAlbums]) => ({
-        label: year,
-        albums: yearAlbums,
-      }))
-  }, [filteredAlbums])
+  }, [categoryAlbums, searchQuery])
 
-  const albumsByCategory = useMemo(() => {
-    const grouped: Record<string, Album[]> = {}
-    filteredAlbums.forEach((album) => {
-      if (!grouped[album.category]) grouped[album.category] = []
-      grouped[album.category].push(album)
-    })
-    return categories
-      .filter((cat) => grouped[cat.name])
-      .map((cat) => ({
-        label: cat.name,
-        albums: grouped[cat.name],
-      }))
-  }, [filteredAlbums, categories])
+  const groupedAlbums = useMemo(() => {
+    return filteredCategories
+      .filter((cat) => categoryAlbums[cat.name])
+      .map((cat) => {
+        let albums = categoryAlbums[cat.name].filter((album) =>
+          album.title.toLowerCase().includes(searchQuery.toLowerCase())
+        )
 
-  const groupedAlbums = groupBy === 'year' ? albumsByYear : albumsByCategory
+        // Aplicar ordenamiento
+        albums = [...albums].sort((a, b) => {
+          const comparison = a.title.localeCompare(b.title, 'es', {
+            numeric: true,
+            sensitivity: 'base',
+          })
+          return sortOrder === 'asc' ? comparison : -comparison
+        })
+
+        return {
+          label: cat.name,
+          albums,
+        }
+      })
+      .filter((group) => group.albums.length > 0)
+  }, [filteredCategories, categoryAlbums, searchQuery, sortOrder])
 
   let globalIndex = 0
 
@@ -155,8 +160,8 @@ export default function LibraryPage() {
       <Header
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
-        groupBy={groupBy}
-        setGroupBy={setGroupBy}
+        sortOrder={sortOrder}
+        setSortOrder={setSortOrder}
       />
 
       <div className="flex min-h-[calc(100vh-180px)]">

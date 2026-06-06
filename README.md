@@ -25,6 +25,8 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 | **Almacenamiento** | Google Drive |
 | **Autenticación Drive** | Service Account (JWT) |
 | **SDK Drive** | googleapis (oficial) |
+| **Optimización de Imágenes** | sharp (compresión de thumbnails) |
+| **Extracción de Metadatos** | exifr (lectura de EXIF, años de fotos) |
 
 ## 📁 Estructura de Carpetas
 
@@ -32,23 +34,31 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 src/
 ├── app/
 │   ├── api/
-│   │   └── test-drive/          # API de prueba para validar conexión
-│   │       └── route.ts
-│   ├── album/                   # Rutas dinámicas para álbumes individuales
-│   │   └── layout.tsx
+│   │   ├── test-drive/          # API de prueba para validar conexión
+│   │   ├── categories/          # APIs de categorías
+│   │   ├── albums/              # APIs de álbumes
+│   │   └── media/               # APIs de multimedia
+│   │       ├── [id]/
+│   │       │   ├── route.ts     # GET /api/media/[id] - Servir media
+│   │       │   └── thumbnail/
+│   │       │       └── route.ts # GET /api/media/[id]/thumbnail
+│   ├── album/
+│   │   ├── layout.tsx
+│   │   └── [id]/
+│   │       └── page.tsx         # Página de álbum con galería
 │   ├── globals.css
 │   ├── layout.tsx               # Layout raíz
 │   └── page.tsx                 # Página de inicio (biblioteca)
 │
 ├── components/                  # Componentes React reutilizables
-│   ├── layout/                  # Componentes de estructura
-│   │   └── Header.tsx
-│   ├── library/                 # Componentes de la biblioteca
-│   │   └── AlbumCard.tsx
-│   ├── ui/                      # Componentes de utilidad UI
-│   │   └── TextureFilters.tsx
-│   ├── viewer/                  # Componentes de visualización
-│   │   └── FullscreenViewer.tsx
+│   ├── layout/
+│   │   └── Header.tsx           # Header simplificado (sin search)
+│   ├── library/
+│   │   └── AlbumCard.tsx        # Tarjeta de álbum
+│   ├── ui/
+│   │   └── TextureFilters.tsx   # Filtros visuales
+│   ├── viewer/
+│   │   └── FullscreenViewer.tsx # Visor a pantalla completa
 │   └── index.ts                 # Exportaciones centralizadas
 │
 ├── features/                    # Funcionalidades futuras (modular)
@@ -180,6 +190,113 @@ Cada álbum puede contener una portada opcional:
 - `cover.webp`
 
 Si hay múltiples coincidencias, se usa la primera encontrada. Si no existe portada, se usa la primera imagen del álbum.
+
+## 🎬 Pipeline Multimedia
+
+La aplicación implementa un sistema completo de servicio de multimedia desde Google Drive con optimización de ancho de banda y carga progresiva.
+
+### API de Multimedia
+
+#### GET /api/media/[id]
+Sirve el archivo multimedia completo (imagen o video) desde Google Drive.
+- **Parámetros**: ID del archivo (en la ruta)
+- **Respuesta**: Stream de contenido (Buffer) con headers de caché
+- **Cache**: 1 año (max-age=31536000)
+- **Características**: Streaming real, no redirige (evita problemas de CORS), descarga bajo demanda
+
+#### GET /api/media/[id]/thumbnail
+Sirve una miniatura optimizada del archivo.
+- **Parámetros**:
+  - `id`: ID del archivo (en la ruta)
+  - `size`: (query) `small` (200px, por defecto), `medium` (400px), `large` (800px)
+- **Respuesta**: Imagen JPEG comprimida (~10-50 KB típicamente)
+- **Cache**: 1 año + caché en memoria (máx. 100 entradas)
+- **Características**:
+  - Usa `thumbnailLink` de Google Drive cuando disponibles
+  - Si no, comprime localmente con `sharp` (resize + JPEG 80% calidad)
+  - Para vídeos sin thumbnail: retorna 204 (placeholder en cliente)
+  - Caché en memoria evita regeneraciones repetidas
+
+### Estrategia de Carga
+
+1. **Biblioteca (página principal)**
+   - Carga solo metadatos básicos de categorías
+   - Carga solo portadas de álbumes (no contenido completo)
+   - Uso de caché en memoria para evitar consultas repetidas
+
+2. **Página de Álbum**
+   - Carga lista completa de medios con metadatos (id, tipo, dimensiones, duración)
+   - Renderiza solo miniaturas en grilla
+   - Lazy loading con IntersectionObserver para imágenes fuera de pantalla
+
+3. **Visor a Pantalla Completa**
+   - Precargas inteligentes: anterior, actual, siguiente
+   - Navegación con flechas, swipe táctil
+   - Videos con controles nativos
+   - Zoom automático para imágenes grandes
+
+### Modelo Media
+
+Cada archivo multimedia tiene la siguiente estructura:
+
+```typescript
+interface Media {
+  id: string                    # ID del archivo en Google Drive
+  type: 'image' | 'video'      # Tipo de media
+  fileName: string              # Nombre original del archivo
+  title?: string               # Título (igual a fileName por ahora)
+  date?: string                # Fecha (futuro)
+  width: number                # Ancho original
+  height: number               # Alto original
+  duration?: number            # Duración en segundos (solo videos)
+  thumbnailUrl: string         # URL a /api/media/[id]/thumbnail
+  mediaUrl: string             # URL a /api/media/[id]
+}
+```
+
+### Caché en Memoria
+
+Implementación optimizada con TTL (Time To Live):
+
+- **Categorías**: 1 hora
+- **Álbumes**: 1 hora
+- **Media**: 30 minutos
+- **Portadas**: 1 hora
+
+El caché se invalida automáticamente tras expirar. Para invalidación manual:
+```typescript
+invalidateCategoryCache(categoryId)
+invalidateAlbumCache(albumId)
+invalidateAllCache()
+```
+
+### Optimizaciones Implementadas
+
+✅ Streaming real de archivos desde Google Drive
+✅ Thumbnails optimizadas (sharp) con caché en memoria
+✅ Lazy loading de imágenes en grilla con IntersectionObserver (300px margin)
+✅ Precargas de media en visor para navegación fluida
+✅ Metadata completa (dimensiones, duración) sin descargar archivos
+✅ Headers de caché agresivos (1 año, immutable)
+✅ CORS habilitado para servir desde cualquier origen
+✅ Ordenamiento alphabético en biblioteca y cronológico en álbumes
+✅ Agrupación automática por año dentro de álbumes
+
+## 📅 Organización Cronológica en Álbumes
+
+Cada álbum agrupa automáticamente las fotografías y vídeos por año, utilizando esta prioridad:
+
+1. **EXIF DateTimeOriginal** (para imágenes con metadatos originales)
+2. **Metadata de grabación** (para vídeos)
+3. **Patrón en nombre de archivo** (ej: IMG_20190523.jpg, Vacaciones_2020.jpg)
+4. **createdTime de Google Drive**
+5. **modifiedTime de Google Drive**
+
+**Comportamiento especial:**
+- Los medios sin año conocido se agrupan al final de forma discreta
+- Selector ascendente/descendente en header del álbum
+- Grupo sin año permanece siempre al final independientemente del orden
+- Diseño integrado con estética del álbum papel
 
 ## 🏃 Desarrollo
 
