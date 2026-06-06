@@ -59,7 +59,23 @@ export async function GET(
     const isImage = mimeType.startsWith('image/')
     const isVideo = mimeType.startsWith('video/')
 
-    // Intentar usar thumbnailLink de Google Drive
+    // Para vídeos: retornar siempre placeholder gris (no usar thumbnailLink verde)
+    if (isVideo) {
+      const grayPngBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+      const buffer = Buffer.from(grayPngBase64, 'base64')
+      return new Response(new Uint8Array(buffer), {
+        status: 200,
+        headers: {
+          'Content-Type': 'image/png',
+          'Content-Length': buffer.length.toString(),
+          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Access-Control-Allow-Origin': '*',
+        },
+      })
+    }
+
+    // Intentar usar thumbnailLink de Google Drive (solo para imágenes)
     if (fileMetadata.data.thumbnailLink) {
       const thumbnailUrl = fileMetadata.data.thumbnailLink
 
@@ -189,23 +205,6 @@ export async function GET(
       }
 
       return await streamToBuffer()
-    }
-
-    // Para vídeos sin thumbnailLink: PNG gris como placeholder
-    if (isVideo) {
-      // PNG 1x1 gris para videos
-      const grayPngBase64 =
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
-      const buffer = Buffer.from(grayPngBase64, 'base64')
-      return new Response(new Uint8Array(buffer), {
-        status: 200,
-        headers: {
-          'Content-Type': 'image/png',
-          'Content-Length': buffer.length.toString(),
-          'Cache-Control': 'public, max-age=31536000, immutable',
-          'Access-Control-Allow-Origin': '*',
-        },
-      })
     }
 
     return new Response('Unsupported file type', { status: 400 })

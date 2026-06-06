@@ -141,9 +141,13 @@ export function FullscreenViewer({
     if (!video) return
 
     if (isVideoPlaying) {
-      video.play().catch(() => {
-        setIsVideoPlaying(false)
-      })
+      // Esperar a que el video esté listo antes de reproducir
+      const playPromise = video.play()
+      if (playPromise !== undefined) {
+        playPromise.catch(() => {
+          setIsVideoPlaying(false)
+        })
+      }
     } else {
       video.pause()
     }
@@ -166,21 +170,37 @@ export function FullscreenViewer({
       setVideoCurrentTime(video.currentTime)
     }
 
+    const handleSeeking = () => {
+      // Asegurar que el video continúa si debe estar reproduciendo
+      if (isVideoPlaying && video.paused) {
+        video.play().catch(() => setIsVideoPlaying(false))
+      }
+    }
+
     video.addEventListener('timeupdate', handleTimeUpdate)
-    return () => video.removeEventListener('timeupdate', handleTimeUpdate)
-  }, [])
+    video.addEventListener('seeking', handleSeeking)
+    return () => {
+      video.removeEventListener('timeupdate', handleTimeUpdate)
+      video.removeEventListener('seeking', handleSeeking)
+    }
+  }, [isVideoPlaying])
 
   // Update video current time when slider changes
   const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const video = videoRef.current
     if (!video) return
 
+    const wasPlaying = isVideoPlaying && !video.paused
     const newTime = parseFloat(e.target.value)
+
     video.currentTime = newTime
     setVideoCurrentTime(newTime)
-    // Continuar reproducción si estaba en pausa
-    if (isVideoPlaying && video.paused) {
-      video.play().catch(() => setIsVideoPlaying(false))
+
+    // Asegurar que continúa reproduciéndose si estaba en reproducción
+    if (wasPlaying) {
+      setTimeout(() => {
+        video.play().catch(() => setIsVideoPlaying(false))
+      }, 0)
     }
   }
 
@@ -188,12 +208,17 @@ export function FullscreenViewer({
     const video = videoRef.current
     if (!video) return
 
+    const wasPlaying = isVideoPlaying && !video.paused
     const newTime = Math.max(0, Math.min(videoDuration, video.currentTime + seconds))
+
     video.currentTime = newTime
     setVideoCurrentTime(newTime)
-    // Continuar reproducción si estaba en pausa
-    if (isVideoPlaying && video.paused) {
-      video.play().catch(() => setIsVideoPlaying(false))
+
+    // Asegurar que continúa reproduciéndose si estaba en reproducción
+    if (wasPlaying) {
+      setTimeout(() => {
+        video.play().catch(() => setIsVideoPlaying(false))
+      }, 0)
     }
   }
 
