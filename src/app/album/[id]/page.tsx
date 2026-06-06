@@ -441,7 +441,7 @@ export default function AlbumPage() {
                     fontStyle: 'italic',
                   }}
                 >
-                  {album.year} — {album.media.length} fotos
+                  {album.media.length} fotos
                 </span>
               </div>
             </div>
