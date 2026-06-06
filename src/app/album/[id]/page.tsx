@@ -309,6 +309,11 @@ export default function AlbumPage() {
     return result
   }, [album, yearSortOrder])
 
+  // Flatten the sorted groups to get the media in display order
+  const flattenedAndSortedMedia = useMemo(() => {
+    return groupedByYear.flatMap((group) => group.medios)
+  }, [groupedByYear])
+
   useEffect(() => {
     const loadAlbum = async () => {
       try {
@@ -578,7 +583,7 @@ export default function AlbumPage() {
       <AnimatePresence>
         {viewerOpen && (
           <FullscreenViewer
-            media={album.media}
+            media={flattenedAndSortedMedia}
             initialIndex={viewerIndex}
             autoPlay={viewerAutoPlay}
             onClose={() => {

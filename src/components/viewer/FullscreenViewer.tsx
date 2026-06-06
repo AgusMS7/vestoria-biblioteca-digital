@@ -10,7 +10,6 @@ import {
   Pause,
   Maximize,
   RotateCw,
-  RotateCcw,
   ZoomIn,
   Presentation,
   Square,
@@ -329,17 +328,9 @@ export function FullscreenViewer({
                     <button
                       onClick={() => setRotation((r) => (r + 90) % 360)}
                       className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
-                      title="Rotar derecha"
+                      title="Rotar"
                     >
                       <RotateCw className="w-6 h-6 text-white" />
-                    </button>
-
-                    <button
-                      onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
-                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
-                      title="Rotar izquierda"
-                    >
-                      <RotateCcw className="w-6 h-6 text-white" />
                     </button>
 
                     <button
