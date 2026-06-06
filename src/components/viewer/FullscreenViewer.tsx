@@ -276,6 +276,7 @@ export function FullscreenViewer({
               ref={videoRef}
               src={currentMedia.mediaUrl}
               className="select-none"
+              crossOrigin="anonymous"
               style={{
                 width: '100%',
                 height: '100%',
@@ -284,6 +285,9 @@ export function FullscreenViewer({
               }}
               onLoadedMetadata={(e) => {
                 setVideoDuration(e.currentTarget.duration)
+              }}
+              onTimeUpdate={(e) => {
+                setVideoCurrentTime(e.currentTarget.currentTime)
               }}
             />
           )}
