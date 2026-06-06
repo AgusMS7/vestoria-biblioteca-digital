@@ -13,8 +13,7 @@ import {
   ZoomIn,
   Presentation,
   Square,
-  SkipBack,
-  SkipForward,
+  RotateCcw,
   Volume2,
 } from 'lucide-react'
 import { cn } from '@/lib'
@@ -56,7 +55,7 @@ export function FullscreenViewer({
   const [isSlideshow, setIsSlideshow] = useState(autoPlay)
 
   const videoRef = useRef<HTMLVideoElement>(null)
-  const containerRef = useRef<HTMLDivElement>(null)
+  const timelineInputRef = useRef<HTMLInputElement>(null)
 
   const currentMedia = media[currentIndex]
 
@@ -158,7 +157,7 @@ export function FullscreenViewer({
     }
   }, [videoVolume])
 
-  // Sync video time updates
+  // Handle timeupdate from video element
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
@@ -173,19 +172,21 @@ export function FullscreenViewer({
 
   // Update video current time when slider changes
   const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const video = videoRef.current
+    if (!video) return
+
     const newTime = parseFloat(e.target.value)
+    video.currentTime = newTime
     setVideoCurrentTime(newTime)
-    if (videoRef.current) {
-      videoRef.current.currentTime = newTime
-    }
   }
 
   const skipVideo = (seconds: number) => {
-    if (videoRef.current) {
-      const newTime = Math.max(0, Math.min(videoDuration, videoRef.current.currentTime + seconds))
-      videoRef.current.currentTime = newTime
-      setVideoCurrentTime(newTime)
-    }
+    const video = videoRef.current
+    if (!video) return
+
+    const newTime = Math.max(0, Math.min(videoDuration, video.currentTime + seconds))
+    video.currentTime = newTime
+    setVideoCurrentTime(newTime)
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -213,7 +214,6 @@ export function FullscreenViewer({
       onMouseMove={handleMouseMove}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      ref={containerRef}
     >
       <AnimatePresence mode="wait">
         <motion.div
@@ -248,7 +248,6 @@ export function FullscreenViewer({
                 maxHeight: '100%',
                 objectFit: fitMode,
                 objectPosition: 'center',
-                transform: `scale(${zoom})`,
               }}
               onLoadedMetadata={(e) => {
                 setVideoDuration(e.currentTarget.duration)
@@ -307,7 +306,7 @@ export function FullscreenViewer({
               </>
             )}
 
-            {/* Bottom info and image controls */}
+            {/* Bottom info and controls */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 sm:p-6">
               <div className="max-w-4xl mx-auto">
                 {/* File info */}
@@ -362,10 +361,11 @@ export function FullscreenViewer({
                         {Math.floor(videoCurrentTime)}s
                       </span>
                       <input
+                        ref={timelineInputRef}
                         type="range"
                         min="0"
-                        max={videoDuration || 0}
-                        value={videoCurrentTime}
+                        max={Math.floor(videoDuration) || 0}
+                        value={Math.floor(videoCurrentTime)}
                         onChange={handleTimelineChange}
                         className="flex-1 h-2 bg-white/20 rounded cursor-pointer accent-white"
                       />
@@ -381,7 +381,7 @@ export function FullscreenViewer({
                         className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
                         title="Retroceder 5s"
                       >
-                        <SkipBack className="w-6 h-6 text-white" />
+                        <RotateCcw className="w-6 h-6 text-white" />
                       </button>
 
                       <button
@@ -401,7 +401,7 @@ export function FullscreenViewer({
                         className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
                         title="Avanzar 5s"
                       >
-                        <SkipForward className="w-6 h-6 text-white" />
+                        <RotateCw className="w-6 h-6 text-white" />
                       </button>
 
                       <div className="flex items-center gap-2 ml-6">
