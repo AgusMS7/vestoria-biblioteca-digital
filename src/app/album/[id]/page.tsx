@@ -1,11 +1,11 @@
 'use client'
 
-import { useState, useMemo } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Play } from 'lucide-react'
-import { albums } from '@/constants'
 import { FullscreenViewer, TextureFilters } from '@/components'
+import type { Album } from '@/types'
 
 function getAlbumPageColors(color: { h: number; s: number; l: number }) {
   const { h, s, l } = color
@@ -29,15 +29,65 @@ function getAlbumPageColors(color: { h: number; s: number; l: number }) {
 }
 
 const TAPE_STYLES = [
-  { rotation: 35, top: '-8px', right: '-12px', left: 'auto', bottom: 'auto', width: '50px' },
-  { rotation: -35, top: '-8px', left: '-12px', right: 'auto', bottom: 'auto', width: '50px' },
-  { rotation: 0, top: '-6px', left: '50%', right: 'auto', bottom: 'auto', width: '60px', translateX: true },
-  { rotation: -40, bottom: '-8px', left: '-10px', right: 'auto', top: 'auto', width: '45px' },
-  { rotation: 5, top: '-5px', right: '10px', left: 'auto', bottom: 'auto', width: '55px' },
-  { rotation: -30, top: '-6px', left: '-8px', right: 'auto', bottom: 'auto', width: '40px', dual: true },
+  {
+    rotation: 35,
+    top: '-8px',
+    right: '-12px',
+    left: 'auto',
+    bottom: 'auto',
+    width: '50px',
+  },
+  {
+    rotation: -35,
+    top: '-8px',
+    left: '-12px',
+    right: 'auto',
+    bottom: 'auto',
+    width: '50px',
+  },
+  {
+    rotation: 0,
+    top: '-6px',
+    left: '50%',
+    right: 'auto',
+    bottom: 'auto',
+    width: '60px',
+    translateX: true,
+  },
+  {
+    rotation: -40,
+    bottom: '-8px',
+    left: '-10px',
+    right: 'auto',
+    top: 'auto',
+    width: '45px',
+  },
+  {
+    rotation: 5,
+    top: '-5px',
+    right: '10px',
+    left: 'auto',
+    bottom: 'auto',
+    width: '55px',
+  },
+  {
+    rotation: -30,
+    top: '-6px',
+    left: '-8px',
+    right: 'auto',
+    bottom: 'auto',
+    width: '40px',
+    dual: true,
+  },
 ]
 
-function AdhesiveTape({ style, isSecond = false }: { style: typeof TAPE_STYLES[0]; isSecond?: boolean }) {
+function AdhesiveTape({
+  style,
+  isSecond = false,
+}: {
+  style: (typeof TAPE_STYLES)[0]
+  isSecond?: boolean
+}) {
   const tapeStyle: React.CSSProperties = {
     position: 'absolute',
     top: isSecond ? 'auto' : (style.top as string),
@@ -46,26 +96,29 @@ function AdhesiveTape({ style, isSecond = false }: { style: typeof TAPE_STYLES[0
     bottom: isSecond ? '-6px' : (style.bottom as string),
     width: style.width,
     height: '18px',
-    transform: `rotate(${isSecond ? 30 : style.rotation}deg) ${style.translateX && !isSecond ? 'translateX(-50%)' : ''}`,
-    background: 'linear-gradient(180deg, rgba(235,220,195,0.9) 0%, rgba(220,200,170,0.92) 50%, rgba(205,185,155,0.9) 100%)',
+    transform: `rotate(${isSecond ? 30 : style.rotation}deg) ${
+      style.translateX && !isSecond ? 'translateX(-50%)' : ''
+    }`,
+    background:
+      'linear-gradient(180deg, rgba(235,220,195,0.9) 0%, rgba(220,200,170,0.92) 50%, rgba(205,185,155,0.9) 100%)',
     boxShadow: '0 1px 3px rgba(0,0,0,0.12)',
     zIndex: 10,
   }
   return <div style={tapeStyle} />
 }
 
-function PolaroidPhoto({ 
-  item, 
-  index, 
+function PolaroidPhoto({
+  item,
+  index,
   onClick,
-}: { 
-  item: { id: string; thumbnail: string; title?: string; type: string }
+}: {
+  item: { id: string; thumbnail?: string; title?: string; type: string }
   index: number
   onClick: () => void
 }) {
   const tapeStyle = TAPE_STYLES[index % TAPE_STYLES.length]
   const rotation = ((index * 7) % 9) - 4
-  
+
   return (
     <motion.button
       initial={{ opacity: 0, scale: 0.9, rotate: rotation - 3 }}
@@ -76,24 +129,25 @@ function PolaroidPhoto({
       onClick={onClick}
       className="group relative"
     >
-      <div 
+      <div
         className="relative bg-white p-2 pb-4 shadow-lg transition-shadow duration-300 group-hover:shadow-xl"
         style={{
-          boxShadow: '0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)',
+          boxShadow:
+            '0 4px 12px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)',
           transform: `rotate(${rotation}deg)`,
         }}
       >
         <AdhesiveTape style={tapeStyle} />
         {(tapeStyle as any).dual && <AdhesiveTape style={tapeStyle} isSecond />}
-        
+
         <div className="relative aspect-square overflow-hidden bg-gray-100">
           <img
-            src={item.thumbnail}
+            src={item.thumbnail || item.id}
             alt={item.title || `Foto ${index + 1}`}
             loading="lazy"
             className="w-full h-full object-cover"
           />
-          
+
           {item.type === 'video' && (
             <div className="absolute top-2 right-2 p-1.5 rounded-full bg-black/60 backdrop-blur-sm">
               <Play className="w-3 h-3 text-white fill-white" />
@@ -105,20 +159,29 @@ function PolaroidPhoto({
   )
 }
 
-function BindingRings({ ringColor, ringHighlight, paperColor }: { ringColor: string; ringHighlight: string; paperColor: string }) {
+function BindingRings({
+  ringColor,
+  ringHighlight,
+  paperColor,
+}: {
+  ringColor: string
+  ringHighlight: string
+  paperColor: string
+}) {
   return (
     <div className="absolute -bottom-4 left-0 right-0 flex justify-between px-8 sm:px-16 md:px-24 lg:px-32 z-30 pointer-events-none">
       <div className="flex gap-6 sm:gap-8">
         {[0, 1].map((i) => (
-          <div 
+          <div
             key={`left-${i}`}
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative"
             style={{
               background: `linear-gradient(145deg, ${ringHighlight} 0%, ${ringColor} 40%, ${ringColor} 60%, ${ringHighlight} 100%)`,
-              boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3)',
+              boxShadow:
+                '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3)',
             }}
           >
-            <div 
+            <div
               className="absolute inset-[6px] sm:inset-[7px] rounded-full"
               style={{
                 background: paperColor,
@@ -128,18 +191,19 @@ function BindingRings({ ringColor, ringHighlight, paperColor }: { ringColor: str
           </div>
         ))}
       </div>
-      
+
       <div className="flex gap-6 sm:gap-8">
         {[0, 1].map((i) => (
-          <div 
+          <div
             key={`right-${i}`}
             className="w-7 h-7 sm:w-8 sm:h-8 rounded-full relative"
             style={{
               background: `linear-gradient(145deg, ${ringHighlight} 0%, ${ringColor} 40%, ${ringColor} 60%, ${ringHighlight} 100%)`,
-              boxShadow: '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3)',
+              boxShadow:
+                '0 3px 6px rgba(0,0,0,0.4), inset 0 1px 2px rgba(255,255,255,0.3)',
             }}
           >
-            <div 
+            <div
               className="absolute inset-[6px] sm:inset-[7px] rounded-full"
               style={{
                 background: paperColor,
@@ -157,19 +221,58 @@ export default function AlbumPage() {
   const params = useParams()
   const router = useRouter()
   const id = params.id as string
-  
+
+  const [album, setAlbum] = useState<Album | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const [viewerOpen, setViewerOpen] = useState(false)
   const [viewerIndex, setViewerIndex] = useState(0)
   const [viewerAutoPlay, setViewerAutoPlay] = useState(false)
 
-  const album = useMemo(() => albums.find((a) => a.id === id), [id])
+  useEffect(() => {
+    const loadAlbum = async () => {
+      try {
+        setLoading(true)
+        setError(null)
+
+        const response = await fetch(`/api/albums/${id}`)
+        if (!response.ok) {
+          throw new Error('Album not found')
+        }
+
+        const data = await response.json()
+        setAlbum(data.data)
+      } catch (err) {
+        const message = err instanceof Error ? err.message : 'Unknown error'
+        setError(message)
+        console.error('Error loading album:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadAlbum()
+  }, [id])
+
   const colors = album ? getAlbumPageColors(album.dominantColor) : null
 
-  if (!album || !colors) {
+  if (loading) {
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-xl text-zinc-400">Album no encontrado</p>
+          <p className="text-xl text-zinc-400">Cargando álbum...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error || !album || !colors) {
+    return (
+      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-zinc-400">
+            {error || 'Album no encontrado'}
+          </p>
           <button
             onClick={() => router.push('/')}
             className="mt-4 px-6 py-2 rounded-lg bg-amber-600 text-white hover:opacity-90 transition-opacity"
@@ -195,21 +298,23 @@ export default function AlbumPage() {
   return (
     <div className="min-h-screen paper-background">
       <TextureFilters />
-      
+
       <motion.header
         initial={{ y: -20, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.5 }}
         className="sticky top-0 z-40 relative"
-        style={{ 
+        style={{
           background: `linear-gradient(180deg, ${colors.headerLight} 0%, ${colors.header} 60%, ${colors.headerDark} 100%)`,
         }}
       >
-        <div 
+        <div
           className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{ background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)' }}
+          style={{
+            background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)',
+          }}
         />
-        
+
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 relative z-20">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -218,16 +323,20 @@ export default function AlbumPage() {
                 className="p-2.5 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
                 style={{
                   background: `linear-gradient(145deg, ${colors.backBtnBg}, ${colors.ringColor})`,
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+                  boxShadow:
+                    '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
                 }}
               >
-                <ArrowLeft className="w-5 h-5" style={{ color: colors.backBtnColor }} />
+                <ArrowLeft
+                  className="w-5 h-5"
+                  style={{ color: colors.backBtnColor }}
+                />
               </button>
-              
+
               <div className="flex flex-col">
-                <h1 
+                <h1
                   className="text-xl sm:text-2xl font-semibold tracking-wide"
-                  style={{ 
+                  style={{
                     color: colors.titleColor,
                     fontFamily: 'var(--font-display)',
                     textShadow: `0 2px 4px ${colors.titleShadow}`,
@@ -235,9 +344,9 @@ export default function AlbumPage() {
                 >
                   {album.title}
                 </h1>
-                <span 
+                <span
                   className="text-sm font-medium tracking-wide mt-0.5"
-                  style={{ 
+                  style={{
                     color: colors.subtitleColor,
                     fontFamily: 'var(--font-display)',
                     fontStyle: 'italic',
@@ -257,14 +366,14 @@ export default function AlbumPage() {
                 '--btn-light': `${colors.buttonLight}%`,
               } as React.CSSProperties}
             >
-              <Play 
-                className="w-4 h-4" 
-                style={{ 
+              <Play
+                className="w-4 h-4"
+                style={{
                   color: colors.playBtnText,
                   fill: colors.playBtnText,
                 }}
               />
-              <span 
+              <span
                 className="hidden sm:inline font-semibold text-sm"
                 style={{ color: colors.playBtnText }}
               >
@@ -273,35 +382,41 @@ export default function AlbumPage() {
             </button>
           </div>
         </div>
-        
-        <div 
+
+        <div
           className="absolute bottom-0 left-0 right-0 h-4 translate-y-full pointer-events-none"
-          style={{ 
+          style={{
             background: 'linear-gradient(to bottom, rgba(0,0,0,0.12), transparent)',
           }}
         />
-        
-        <BindingRings 
-          ringColor={colors.ringColor} 
-          ringHighlight={colors.ringHighlight} 
-          paperColor="#f4ece0" 
+
+        <BindingRings
+          ringColor={colors.ringColor}
+          ringHighlight={colors.ringHighlight}
+          paperColor="#f4ece0"
         />
       </motion.header>
-      
+
       <div className="h-8" />
 
       <main className="min-h-[calc(100vh-120px)] relative z-10">
         <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-10 sm:py-14">
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
-            {album.media.map((item, index) => (
-              <PolaroidPhoto
-                key={item.id}
-                item={item}
-                index={index}
-                onClick={() => openViewer(index)}
-              />
-            ))}
-          </div>
+          {album.media.length === 0 ? (
+            <div className="text-center text-zinc-500">
+              <p>No hay archivos multimedia en este álbum</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
+              {album.media.map((item, index) => (
+                <PolaroidPhoto
+                  key={item.id}
+                  item={item}
+                  index={index}
+                  onClick={() => openViewer(index)}
+                />
+              ))}
+            </div>
+          )}
         </div>
       </main>
 

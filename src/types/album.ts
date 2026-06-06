@@ -1,12 +1,9 @@
-export interface MediaItem {
-  id: string
-  type: 'image' | 'video'
-  src: string
-  thumbnail: string
-  title?: string
-  date?: string
-}
+import type { Media } from './media'
 
+/**
+ * Álbum de fotos/videos
+ * Representa una carpeta dentro de una categoría en Google Drive
+ */
 export interface Album {
   id: string
   title: string
@@ -15,6 +12,6 @@ export interface Album {
   coverImage: string
   description?: string
   mediaCount: number
-  media: MediaItem[]
+  media: Media[]
   dominantColor: { h: number; s: number; l: number }
 }
