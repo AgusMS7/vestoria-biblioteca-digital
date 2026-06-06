@@ -427,7 +427,7 @@ Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI
 
 ## 📝 Licencia
 
-Privado - Proyecto personal
+Privado - Agustín Sandoval
 
 ## 👨‍💻 Desarrollo Continuo
 
@@ -435,5 +435,5 @@ Este proyecto está en desarrollo activo. Para cambios no previstos o decisiones
 
 ---
 
-**Última actualización**: Enero 2025  
+**Última actualización**: Junio 2026  
 **Versión**: 0.1.0

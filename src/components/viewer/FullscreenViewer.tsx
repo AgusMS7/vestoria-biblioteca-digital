@@ -178,6 +178,10 @@ export function FullscreenViewer({
     const newTime = parseFloat(e.target.value)
     video.currentTime = newTime
     setVideoCurrentTime(newTime)
+    // Continuar reproducción si estaba en pausa
+    if (isVideoPlaying && video.paused) {
+      video.play().catch(() => setIsVideoPlaying(false))
+    }
   }
 
   const skipVideo = (seconds: number) => {
@@ -187,6 +191,10 @@ export function FullscreenViewer({
     const newTime = Math.max(0, Math.min(videoDuration, video.currentTime + seconds))
     video.currentTime = newTime
     setVideoCurrentTime(newTime)
+    // Continuar reproducción si estaba en pausa
+    if (isVideoPlaying && video.paused) {
+      video.play().catch(() => setIsVideoPlaying(false))
+    }
   }
 
   const handleTouchStart = (e: React.TouchEvent) => {
@@ -230,8 +238,8 @@ export function FullscreenViewer({
               alt={currentMedia.title || ''}
               className="select-none"
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
+                width: '100%',
+                height: '100%',
                 objectFit: fitMode,
                 objectPosition: 'center',
                 transform: `scale(${zoom}) rotate(${rotation}deg)`,
@@ -244,8 +252,8 @@ export function FullscreenViewer({
               src={currentMedia.mediaUrl}
               className="select-none"
               style={{
-                maxWidth: '100%',
-                maxHeight: '100%',
+                width: '100%',
+                height: '100%',
                 objectFit: fitMode,
                 objectPosition: 'center',
               }}
@@ -268,7 +276,7 @@ export function FullscreenViewer({
             {/* Close button */}
             <button
               onClick={onClose}
-              className="absolute top-4 right-4 sm:top-6 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+              className="absolute top-4 right-4 sm:top-6 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
             >
               <X className="w-6 h-6 text-white" />
             </button>
@@ -277,7 +285,7 @@ export function FullscreenViewer({
             {currentMedia.type === 'image' && (
               <button
                 onClick={() => setIsSlideshow(!isSlideshow)}
-                className="absolute top-20 right-4 sm:top-24 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+                className="absolute top-20 right-4 sm:top-24 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                 title={isSlideshow ? 'Detener presentación' : 'Iniciar presentación'}
               >
                 {isSlideshow ? (
@@ -293,13 +301,13 @@ export function FullscreenViewer({
               <>
                 <button
                   onClick={goPrev}
-                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                 >
                   <ChevronLeft className="w-8 h-8 text-white" />
                 </button>
                 <button
                   onClick={goNext}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                 >
                   <ChevronRight className="w-8 h-8 text-white" />
                 </button>
@@ -326,7 +334,7 @@ export function FullscreenViewer({
                   <div className="flex items-center gap-3 mb-6">
                     <button
                       onClick={() => setRotation((r) => (r + 90) % 360)}
-                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                       title="Rotar"
                     >
                       <RotateCw className="w-6 h-6 text-white" />
@@ -334,7 +342,7 @@ export function FullscreenViewer({
 
                     <button
                       onClick={() => setZoom((z) => (z === 1 ? 1.5 : 1))}
-                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                       title="Zoom"
                     >
                       <ZoomIn className="w-6 h-6 text-white" />
@@ -344,7 +352,7 @@ export function FullscreenViewer({
                       onClick={() =>
                         setFitMode((mode) => (mode === 'contain' ? 'cover' : 'contain'))
                       }
-                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                       title="Ajustar"
                     >
                       <Maximize className="w-6 h-6 text-white" />
@@ -378,7 +386,7 @@ export function FullscreenViewer({
                     <div className="flex items-center justify-center gap-3">
                       <button
                         onClick={() => skipVideo(-5)}
-                        className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                         title="Retroceder 5s"
                       >
                         <RotateCcw className="w-6 h-6 text-white" />
@@ -386,7 +394,7 @@ export function FullscreenViewer({
 
                       <button
                         onClick={() => setIsVideoPlaying(!isVideoPlaying)}
-                        className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer"
+                        className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                         title={isVideoPlaying ? 'Pausar' : 'Reproducir'}
                       >
                         {isVideoPlaying ? (
@@ -398,7 +406,7 @@ export function FullscreenViewer({
 
                       <button
                         onClick={() => skipVideo(5)}
-                        className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer focus:ring-2 focus:ring-white focus:outline-none"
                         title="Avanzar 5s"
                       >
                         <RotateCw className="w-6 h-6 text-white" />
@@ -437,7 +445,7 @@ export function FullscreenViewer({
                       setVideoCurrentTime(0)
                     }}
                     className={cn(
-                      'w-2 h-2 rounded-full transition-all cursor-pointer',
+                      'w-2 h-2 rounded-full transition-all cursor-pointer focus:ring-2 focus:ring-white focus:outline-none',
                       idx === currentIndex
                         ? 'bg-white w-4'
                         : 'bg-white/40 hover:bg-white/60'

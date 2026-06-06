@@ -191,12 +191,18 @@ export async function GET(
       return await streamToBuffer()
     }
 
-    // Para vídeos sin thumbnailLink: placeholder
+    // Para vídeos sin thumbnailLink: PNG gris como placeholder
     if (isVideo) {
-      return new Response(null, {
-        status: 204,
+      // PNG 1x1 gris para videos
+      const grayPngBase64 =
+        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
+      const buffer = Buffer.from(grayPngBase64, 'base64')
+      return new Response(new Uint8Array(buffer), {
+        status: 200,
         headers: {
-          'X-Video-No-Thumbnail': 'true',
+          'Content-Type': 'image/png',
+          'Content-Length': buffer.length.toString(),
+          'Cache-Control': 'public, max-age=31536000, immutable',
           'Access-Control-Allow-Origin': '*',
         },
       })

@@ -150,7 +150,7 @@ function PolaroidPhoto({
       whileHover={{ scale: 1.05, rotate: 0, zIndex: 20 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className="group relative"
+      className="group relative cursor-pointer"
     >
       <div
         className="relative bg-white p-2 pb-4 shadow-lg transition-shadow duration-300 group-hover:shadow-xl"
@@ -449,7 +449,7 @@ export default function AlbumPage() {
             <div className="flex items-center gap-3">
               <button
                 onClick={toggleYearSort}
-                className="plastic-button flex items-center gap-2 px-4 py-2"
+                className="plastic-button flex items-center gap-2 px-4 py-2 cursor-pointer"
                 style={{
                   '--btn-hue': colors.buttonHue,
                   '--btn-sat': `${colors.buttonSat}%`,
@@ -473,7 +473,7 @@ export default function AlbumPage() {
 
               <button
                 onClick={startSlideshow}
-                className="plastic-button flex items-center gap-2 px-4 py-2"
+                className="plastic-button flex items-center gap-2 px-4 py-2 cursor-pointer"
                 style={{
                   '--btn-hue': colors.buttonHue,
                   '--btn-sat': `${colors.buttonSat}%`,
