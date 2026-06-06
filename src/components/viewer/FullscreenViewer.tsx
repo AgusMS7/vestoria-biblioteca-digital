@@ -141,7 +141,10 @@ export function FullscreenViewer({
     if (!video) return
 
     if (isVideoPlaying) {
-      video.play()
+      video.play().catch(() => {
+        // Play failed, pause
+        setIsVideoPlaying(false)
+      })
     } else {
       video.pause()
     }
@@ -164,6 +167,14 @@ export function FullscreenViewer({
     }
   }
 
+  const skipVideo = (seconds: number) => {
+    if (videoRef.current) {
+      const newTime = Math.max(0, Math.min(videoDuration, videoRef.current.currentTime + seconds))
+      videoRef.current.currentTime = newTime
+      setVideoCurrentTime(newTime)
+    }
+  }
+
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.touches[0].clientX)
   }
@@ -177,13 +188,6 @@ export function FullscreenViewer({
       else goPrev()
     }
     setTouchStart(null)
-  }
-
-  // Compute image dimensions considering rotation
-  const getImageDimensions = () => {
-    const isRotated = rotation === 90 || rotation === 270
-    // After rotation, width and height are swapped
-    return isRotated ? { width: '100%', height: 'auto' } : { width: 'auto', height: '100%' }
   }
 
   return (
@@ -208,39 +212,38 @@ export function FullscreenViewer({
           className="absolute inset-0 flex items-center justify-center overflow-hidden"
         >
           {currentMedia.type === 'image' ? (
-            <div className="flex items-center justify-center w-full h-full">
-              <img
-                src={currentMedia.mediaUrl}
-                alt={currentMedia.title || ''}
-                className="select-none transition-transform duration-300"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: fitMode,
-                  transform: `scale(${zoom}) rotate(${rotation}deg)`,
-                }}
-              />
-            </div>
+            <img
+              src={currentMedia.mediaUrl}
+              alt={currentMedia.title || ''}
+              className="select-none"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: fitMode,
+                objectPosition: 'center',
+                transform: `scale(${zoom}) rotate(${rotation}deg)`,
+                transition: 'transform 0.3s ease-out',
+              }}
+            />
           ) : (
-            <div className="flex items-center justify-center w-full h-full">
-              <video
-                ref={videoRef}
-                src={currentMedia.mediaUrl}
-                className="select-none transition-transform duration-300"
-                style={{
-                  maxWidth: '100%',
-                  maxHeight: '100%',
-                  objectFit: fitMode,
-                  transform: `scale(${zoom})`,
-                }}
-                onLoadedMetadata={(e) => {
-                  setVideoDuration(e.currentTarget.duration)
-                }}
-                onTimeUpdate={(e) => {
-                  setVideoCurrentTime(e.currentTarget.currentTime)
-                }}
-              />
-            </div>
+            <video
+              ref={videoRef}
+              src={currentMedia.mediaUrl}
+              className="select-none"
+              style={{
+                maxWidth: '100%',
+                maxHeight: '100%',
+                objectFit: fitMode,
+                objectPosition: 'center',
+                transform: `scale(${zoom})`,
+              }}
+              onLoadedMetadata={(e) => {
+                setVideoDuration(e.currentTarget.duration)
+              }}
+              onTimeUpdate={(e) => {
+                setVideoCurrentTime(e.currentTarget.currentTime)
+              }}
+            />
           )}
         </motion.div>
       </AnimatePresence>
@@ -261,51 +264,6 @@ export function FullscreenViewer({
               <X className="w-6 h-6 text-white" />
             </button>
 
-            {/* Presentation button (below close) */}
-            {currentMedia.type === 'image' && (
-              <button
-                onClick={() => setIsSlideshow(!isSlideshow)}
-                className="absolute top-20 right-4 sm:top-24 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
-                title="Presentación"
-              >
-                <Film className="w-6 h-6 text-white" />
-              </button>
-            )}
-
-            {/* Image controls (image only) */}
-            {currentMedia.type === 'image' && (
-              <>
-                {/* Rotate button */}
-                <button
-                  onClick={() => setRotation((r) => (r + 90) % 360)}
-                  className="absolute top-4 left-4 sm:top-6 sm:left-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
-                  title="Rotar"
-                >
-                  <RotateCw className="w-6 h-6 text-white" />
-                </button>
-
-                {/* Zoom button */}
-                <button
-                  onClick={() => setZoom((z) => (z === 1 ? 1.5 : 1))}
-                  className="absolute top-20 left-4 sm:top-24 sm:left-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
-                  title="Zoom"
-                >
-                  <ZoomIn className="w-6 h-6 text-white" />
-                </button>
-
-                {/* Fit button */}
-                <button
-                  onClick={() =>
-                    setFitMode((mode) => (mode === 'contain' ? 'cover' : 'contain'))
-                  }
-                  className="absolute top-36 left-4 sm:top-44 sm:left-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
-                  title="Ajustar"
-                >
-                  <Maximize className="w-6 h-6 text-white" />
-                </button>
-              </>
-            )}
-
             {/* Navigation buttons */}
             {media.length > 1 && (
               <>
@@ -324,10 +282,11 @@ export function FullscreenViewer({
               </>
             )}
 
-            {/* Bottom info */}
+            {/* Bottom info and image controls */}
             <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-4 sm:p-6">
-              <div className="flex items-center justify-between max-w-4xl mx-auto">
-                <div>
+              <div className="max-w-4xl mx-auto">
+                {/* File info */}
+                <div className="mb-6">
                   {currentMedia.title && (
                     <h3 className="text-white text-lg sm:text-xl font-medium mb-1">
                       {currentMedia.fileName}
@@ -337,12 +296,119 @@ export function FullscreenViewer({
                     {currentIndex + 1} de {media.length}
                   </p>
                 </div>
+
+                {/* Image controls (for images) */}
+                {currentMedia.type === 'image' && (
+                  <div className="flex items-center gap-3 mb-6">
+                    <button
+                      onClick={() => setRotation((r) => (r + 90) % 360)}
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      title="Rotar"
+                    >
+                      <RotateCw className="w-6 h-6 text-white" />
+                    </button>
+
+                    <button
+                      onClick={() => setZoom((z) => (z === 1 ? 1.5 : 1))}
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      title="Zoom"
+                    >
+                      <ZoomIn className="w-6 h-6 text-white" />
+                    </button>
+
+                    <button
+                      onClick={() =>
+                        setFitMode((mode) => (mode === 'contain' ? 'cover' : 'contain'))
+                      }
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      title="Ajustar"
+                    >
+                      <Maximize className="w-6 h-6 text-white" />
+                    </button>
+
+                    <button
+                      onClick={() => setIsSlideshow(!isSlideshow)}
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      title="Presentación"
+                    >
+                      <Film className="w-6 h-6 text-white" />
+                    </button>
+                  </div>
+                )}
+
+                {/* Video controls */}
+                {currentMedia.type === 'video' && (
+                  <div className="space-y-4">
+                    {/* Timeline */}
+                    <div className="flex items-center gap-2">
+                      <span className="text-white/60 text-xs min-w-[30px]">
+                        {Math.floor(videoCurrentTime)}s
+                      </span>
+                      <input
+                        type="range"
+                        min="0"
+                        max={videoDuration || 0}
+                        value={videoCurrentTime}
+                        onChange={handleTimelineChange}
+                        className="flex-1 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                      />
+                      <span className="text-white/60 text-xs min-w-[30px] text-right">
+                        {Math.floor(videoDuration)}s
+                      </span>
+                    </div>
+
+                    {/* Play controls */}
+                    <div className="flex items-center justify-center gap-4">
+                      <button
+                        onClick={() => skipVideo(-5)}
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                        title="Retroceder 5s"
+                      >
+                        <SkipBack className="w-6 h-6 text-white" />
+                      </button>
+
+                      <button
+                        onClick={() => setIsVideoPlaying(!isVideoPlaying)}
+                        className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer"
+                        title={isVideoPlaying ? 'Pausar' : 'Reproducir'}
+                      >
+                        {isVideoPlaying ? (
+                          <Pause className="w-7 h-7 text-white" />
+                        ) : (
+                          <Play className="w-7 h-7 text-white" />
+                        )}
+                      </button>
+
+                      <button
+                        onClick={() => skipVideo(5)}
+                        className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                        title="Avanzar 5s"
+                      >
+                        <SkipForward className="w-6 h-6 text-white" />
+                      </button>
+                    </div>
+
+                    {/* Volume */}
+                    <div className="flex items-center justify-end gap-2">
+                      <Volume2 className="w-5 h-5 text-white/60" />
+                      <input
+                        type="range"
+                        min="0"
+                        max="1"
+                        step="0.1"
+                        value={videoVolume}
+                        onChange={(e) => setVideoVolume(parseFloat(e.target.value))}
+                        className="w-24 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
             {/* Thumbnails indicator */}
             {media.length > 1 && media.length <= 20 && (
-              <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-1.5">
+              <div className="absolute bottom-32 left-1/2 -translate-x-1/2 flex gap-1.5">
                 {media.map((_, idx) => (
                   <button
                     key={idx}
@@ -362,88 +428,6 @@ export function FullscreenViewer({
                     )}
                   />
                 ))}
-              </div>
-            )}
-
-            {/* Video controls */}
-            {currentMedia.type === 'video' && (
-              <div className="absolute bottom-4 sm:bottom-6 left-4 right-4 sm:left-6 sm:right-6 z-20 max-w-4xl mx-auto">
-                {/* Timeline */}
-                <div className="mb-4 flex items-center gap-2">
-                  <span className="text-white/60 text-xs">
-                    {Math.floor(videoCurrentTime)}s
-                  </span>
-                  <input
-                    type="range"
-                    min="0"
-                    max={videoDuration || 0}
-                    value={videoCurrentTime}
-                    onChange={handleTimelineChange}
-                    className="flex-1 h-1 bg-white/20 rounded cursor-pointer accent-white"
-                  />
-                  <span className="text-white/60 text-xs">
-                    {Math.floor(videoDuration)}s
-                  </span>
-                </div>
-
-                {/* Controls: rewind, play, forward */}
-                <div className="flex items-center justify-center gap-4 mb-4">
-                  <button
-                    onClick={() => {
-                      if (videoRef.current) {
-                        videoRef.current.currentTime = Math.max(
-                          0,
-                          videoRef.current.currentTime - 5
-                        )
-                      }
-                    }}
-                    className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
-                    title="Retroceder 5s"
-                  >
-                    <SkipBack className="w-6 h-6 text-white" />
-                  </button>
-
-                  <button
-                    onClick={() => setIsVideoPlaying(!isVideoPlaying)}
-                    className="p-4 rounded-full bg-white/20 backdrop-blur-sm hover:bg-white/30 transition-colors cursor-pointer"
-                    title={isVideoPlaying ? 'Pausar' : 'Reproducir'}
-                  >
-                    {isVideoPlaying ? (
-                      <Pause className="w-7 h-7 text-white" />
-                    ) : (
-                      <Play className="w-7 h-7 text-white" />
-                    )}
-                  </button>
-
-                  <button
-                    onClick={() => {
-                      if (videoRef.current) {
-                        videoRef.current.currentTime = Math.min(
-                          videoDuration,
-                          videoRef.current.currentTime + 5
-                        )
-                      }
-                    }}
-                    className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
-                    title="Avanzar 5s"
-                  >
-                    <SkipForward className="w-6 h-6 text-white" />
-                  </button>
-                </div>
-
-                {/* Volume control */}
-                <div className="flex items-center justify-end gap-2">
-                  <Volume2 className="w-5 h-5 text-white/60" />
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.1"
-                    value={videoVolume}
-                    onChange={(e) => setVideoVolume(parseFloat(e.target.value))}
-                    className="w-24 h-1 bg-white/20 rounded cursor-pointer accent-white"
-                  />
-                </div>
               </div>
             )}
           </motion.div>
