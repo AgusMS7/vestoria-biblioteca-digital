@@ -128,12 +128,19 @@ export default function LibraryPage() {
   }, [categoryAlbums, searchQuery])
 
   const groupedAlbums = useMemo(() => {
-    return filteredCategories
+    return categories
       .filter((cat) => categoryAlbums[cat.name])
       .map((cat) => {
-        let albums = categoryAlbums[cat.name].filter((album) =>
-          album.title.toLowerCase().includes(searchQuery.toLowerCase())
-        )
+        // Filtrar álbumes por título o categoría
+        let albums = categoryAlbums[cat.name].filter((album) => {
+          const matchesTitle = album.title
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+          const matchesCategory = cat.name
+            .toLowerCase()
+            .includes(searchQuery.toLowerCase())
+          return matchesTitle || matchesCategory
+        })
 
         // Aplicar ordenamiento
         albums = [...albums].sort((a, b) => {
@@ -150,7 +157,7 @@ export default function LibraryPage() {
         }
       })
       .filter((group) => group.albums.length > 0)
-  }, [filteredCategories, categoryAlbums, searchQuery, sortOrder])
+  }, [categories, categoryAlbums, searchQuery, sortOrder])
 
   let globalIndex = 0
 
