@@ -25,7 +25,7 @@ export async function GET(
     return new Response('File ID is required', { status: 400 })
   }
 
-  // Generar clave de caché
+  // Generar clave de caché única por tipo de archivo
   const cacheKey = `${fileId}_${size}`
 
   // Verificar caché
@@ -36,7 +36,7 @@ export async function GET(
       headers: {
         'Content-Type': 'image/jpeg',
         'Content-Length': buffer.length.toString(),
-        'Cache-Control': 'public, max-age=31536000, immutable',
+        'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
         'Access-Control-Allow-Origin': '*',
       },
     })
@@ -69,7 +69,7 @@ export async function GET(
         headers: {
           'Content-Type': 'image/png',
           'Content-Length': buffer.length.toString(),
-          'Cache-Control': 'public, max-age=31536000, immutable',
+          'Cache-Control': 'no-cache, public, must-revalidate, max-age=0',
           'Access-Control-Allow-Origin': '*',
         },
       })
