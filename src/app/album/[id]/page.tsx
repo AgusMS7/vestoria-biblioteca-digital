@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play, Calendar, ArrowUp, ArrowDown, Film } from 'lucide-react'
+import { ArrowLeft, Play, Calendar, ArrowUp, ArrowDown, Presentation } from 'lucide-react'
 import { FullscreenViewer, TextureFilters } from '@/components'
 import type { Album, Media } from '@/types'
 
@@ -475,7 +475,7 @@ export default function AlbumPage() {
                   '--btn-light': `${colors.buttonLight}%`,
                 } as React.CSSProperties}
               >
-                <Film
+                <Presentation
                   className="w-4 h-4"
                   style={{
                     color: colors.playBtnText,

@@ -11,7 +11,7 @@ import {
   Maximize,
   RotateCw,
   ZoomIn,
-  Film,
+  Presentation,
   SkipBack,
   SkipForward,
   Volume2,
@@ -53,6 +53,7 @@ export function FullscreenViewer({
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
   const [videoVolume, setVideoVolume] = useState(1)
   const [isSlideshow, setIsSlideshow] = useState(autoPlay)
+  const [isDraggingTimeline, setIsDraggingTimeline] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -142,7 +143,6 @@ export function FullscreenViewer({
 
     if (isVideoPlaying) {
       video.play().catch(() => {
-        // Play failed, pause
         setIsVideoPlaying(false)
       })
     } else {
@@ -158,6 +158,19 @@ export function FullscreenViewer({
     }
   }, [videoVolume])
 
+  // Sync videoCurrentTime when not dragging timeline
+  useEffect(() => {
+    const video = videoRef.current
+    if (!video || isDraggingTimeline) return
+
+    const handleTimeUpdate = () => {
+      setVideoCurrentTime(video.currentTime)
+    }
+
+    video.addEventListener('timeupdate', handleTimeUpdate)
+    return () => video.removeEventListener('timeupdate', handleTimeUpdate)
+  }, [isDraggingTimeline])
+
   // Update video current time when slider changes
   const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newTime = parseFloat(e.target.value)
@@ -165,6 +178,14 @@ export function FullscreenViewer({
     if (videoRef.current) {
       videoRef.current.currentTime = newTime
     }
+  }
+
+  const handleTimelineMouseDown = () => {
+    setIsDraggingTimeline(true)
+  }
+
+  const handleTimelineMouseUp = () => {
+    setIsDraggingTimeline(false)
   }
 
   const skipVideo = (seconds: number) => {
@@ -239,9 +260,6 @@ export function FullscreenViewer({
               }}
               onLoadedMetadata={(e) => {
                 setVideoDuration(e.currentTarget.duration)
-              }}
-              onTimeUpdate={(e) => {
-                setVideoCurrentTime(e.currentTarget.currentTime)
               }}
             />
           )}
@@ -331,7 +349,7 @@ export function FullscreenViewer({
                       className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
                       title="Presentación"
                     >
-                      <Film className="w-6 h-6 text-white" />
+                      <Presentation className="w-6 h-6 text-white" />
                     </button>
                   </div>
                 )}
@@ -350,6 +368,10 @@ export function FullscreenViewer({
                         max={videoDuration || 0}
                         value={videoCurrentTime}
                         onChange={handleTimelineChange}
+                        onMouseDown={handleTimelineMouseDown}
+                        onMouseUp={handleTimelineMouseUp}
+                        onTouchStart={handleTimelineMouseDown}
+                        onTouchEnd={handleTimelineMouseUp}
                         className="flex-1 h-1 bg-white/20 rounded cursor-pointer accent-white"
                       />
                       <span className="text-white/60 text-xs min-w-[30px] text-right">
@@ -357,7 +379,7 @@ export function FullscreenViewer({
                       </span>
                     </div>
 
-                    {/* Play controls */}
+                    {/* Play controls and volume in same line */}
                     <div className="flex items-center justify-center gap-4">
                       <button
                         onClick={() => skipVideo(-5)}
@@ -386,20 +408,19 @@ export function FullscreenViewer({
                       >
                         <SkipForward className="w-6 h-6 text-white" />
                       </button>
-                    </div>
 
-                    {/* Volume */}
-                    <div className="flex items-center justify-end gap-2">
-                      <Volume2 className="w-5 h-5 text-white/60" />
-                      <input
-                        type="range"
-                        min="0"
-                        max="1"
-                        step="0.1"
-                        value={videoVolume}
-                        onChange={(e) => setVideoVolume(parseFloat(e.target.value))}
-                        className="w-24 h-1 bg-white/20 rounded cursor-pointer accent-white"
-                      />
+                      <div className="flex items-center gap-2 ml-4">
+                        <Volume2 className="w-5 h-5 text-white/60 flex-shrink-0" />
+                        <input
+                          type="range"
+                          min="0"
+                          max="1"
+                          step="0.1"
+                          value={videoVolume}
+                          onChange={(e) => setVideoVolume(parseFloat(e.target.value))}
+                          className="w-20 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                        />
+                      </div>
                     </div>
                   </div>
                 )}
