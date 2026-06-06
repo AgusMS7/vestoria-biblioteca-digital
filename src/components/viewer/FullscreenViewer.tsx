@@ -10,8 +10,10 @@ import {
   Pause,
   Maximize,
   RotateCw,
+  RotateCcw,
   ZoomIn,
   Presentation,
+  Square,
   SkipBack,
   SkipForward,
   Volume2,
@@ -53,7 +55,6 @@ export function FullscreenViewer({
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
   const [videoVolume, setVideoVolume] = useState(1)
   const [isSlideshow, setIsSlideshow] = useState(autoPlay)
-  const [isDraggingTimeline, setIsDraggingTimeline] = useState(false)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const containerRef = useRef<HTMLDivElement>(null)
@@ -158,10 +159,10 @@ export function FullscreenViewer({
     }
   }, [videoVolume])
 
-  // Sync videoCurrentTime when not dragging timeline
+  // Sync video time updates
   useEffect(() => {
     const video = videoRef.current
-    if (!video || isDraggingTimeline) return
+    if (!video) return
 
     const handleTimeUpdate = () => {
       setVideoCurrentTime(video.currentTime)
@@ -169,7 +170,7 @@ export function FullscreenViewer({
 
     video.addEventListener('timeupdate', handleTimeUpdate)
     return () => video.removeEventListener('timeupdate', handleTimeUpdate)
-  }, [isDraggingTimeline])
+  }, [])
 
   // Update video current time when slider changes
   const handleTimelineChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -178,14 +179,6 @@ export function FullscreenViewer({
     if (videoRef.current) {
       videoRef.current.currentTime = newTime
     }
-  }
-
-  const handleTimelineMouseDown = () => {
-    setIsDraggingTimeline(true)
-  }
-
-  const handleTimelineMouseUp = () => {
-    setIsDraggingTimeline(false)
   }
 
   const skipVideo = (seconds: number) => {
@@ -282,6 +275,21 @@ export function FullscreenViewer({
               <X className="w-6 h-6 text-white" />
             </button>
 
+            {/* Presentation button (below close, only for images) */}
+            {currentMedia.type === 'image' && (
+              <button
+                onClick={() => setIsSlideshow(!isSlideshow)}
+                className="absolute top-20 right-4 sm:top-24 sm:right-6 p-4 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors z-10 cursor-pointer"
+                title={isSlideshow ? 'Detener presentación' : 'Iniciar presentación'}
+              >
+                {isSlideshow ? (
+                  <Square className="w-6 h-6 text-white" />
+                ) : (
+                  <Presentation className="w-6 h-6 text-white" />
+                )}
+              </button>
+            )}
+
             {/* Navigation buttons */}
             {media.length > 1 && (
               <>
@@ -315,15 +323,23 @@ export function FullscreenViewer({
                   </p>
                 </div>
 
-                {/* Image controls (for images) */}
+                {/* Image controls (for images only) */}
                 {currentMedia.type === 'image' && (
                   <div className="flex items-center gap-3 mb-6">
                     <button
                       onClick={() => setRotation((r) => (r + 90) % 360)}
                       className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
-                      title="Rotar"
+                      title="Rotar derecha"
                     >
                       <RotateCw className="w-6 h-6 text-white" />
+                    </button>
+
+                    <button
+                      onClick={() => setRotation((r) => (r - 90 + 360) % 360)}
+                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
+                      title="Rotar izquierda"
+                    >
+                      <RotateCcw className="w-6 h-6 text-white" />
                     </button>
 
                     <button
@@ -343,14 +359,6 @@ export function FullscreenViewer({
                     >
                       <Maximize className="w-6 h-6 text-white" />
                     </button>
-
-                    <button
-                      onClick={() => setIsSlideshow(!isSlideshow)}
-                      className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
-                      title="Presentación"
-                    >
-                      <Presentation className="w-6 h-6 text-white" />
-                    </button>
                   </div>
                 )}
 
@@ -359,7 +367,7 @@ export function FullscreenViewer({
                   <div className="space-y-4">
                     {/* Timeline */}
                     <div className="flex items-center gap-2">
-                      <span className="text-white/60 text-xs min-w-[30px]">
+                      <span className="text-white/60 text-xs min-w-[35px]">
                         {Math.floor(videoCurrentTime)}s
                       </span>
                       <input
@@ -368,19 +376,15 @@ export function FullscreenViewer({
                         max={videoDuration || 0}
                         value={videoCurrentTime}
                         onChange={handleTimelineChange}
-                        onMouseDown={handleTimelineMouseDown}
-                        onMouseUp={handleTimelineMouseUp}
-                        onTouchStart={handleTimelineMouseDown}
-                        onTouchEnd={handleTimelineMouseUp}
-                        className="flex-1 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                        className="flex-1 h-2 bg-white/20 rounded cursor-pointer accent-white"
                       />
-                      <span className="text-white/60 text-xs min-w-[30px] text-right">
+                      <span className="text-white/60 text-xs min-w-[35px] text-right">
                         {Math.floor(videoDuration)}s
                       </span>
                     </div>
 
                     {/* Play controls and volume in same line */}
-                    <div className="flex items-center justify-center gap-4">
+                    <div className="flex items-center justify-center gap-3">
                       <button
                         onClick={() => skipVideo(-5)}
                         className="p-3 rounded-full bg-white/10 backdrop-blur-sm hover:bg-white/20 transition-colors cursor-pointer"
@@ -409,7 +413,7 @@ export function FullscreenViewer({
                         <SkipForward className="w-6 h-6 text-white" />
                       </button>
 
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ml-6">
                         <Volume2 className="w-5 h-5 text-white/60 flex-shrink-0" />
                         <input
                           type="range"
@@ -418,7 +422,7 @@ export function FullscreenViewer({
                           step="0.1"
                           value={videoVolume}
                           onChange={(e) => setVideoVolume(parseFloat(e.target.value))}
-                          className="w-20 h-1 bg-white/20 rounded cursor-pointer accent-white"
+                          className="w-20 h-2 bg-white/20 rounded cursor-pointer accent-white"
                         />
                       </div>
                     </div>
