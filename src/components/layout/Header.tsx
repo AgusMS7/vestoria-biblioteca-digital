@@ -52,7 +52,7 @@ export function Header({
               </h1>
             </motion.div>
 
-            <div className="flex flex-col sm:flex-row gap-3 flex-1 lg:max-w-md">
+            <div className="flex flex-row gap-3 flex-1 lg:max-w-md">
               <div className="relative flex-1">
                 <div
                   className="absolute inset-0 rounded-sm"
