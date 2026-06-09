@@ -61,16 +61,19 @@ export async function GET(
 
     // Intentar usar thumbnailLink de Google Drive (para imágenes y videos)
     if (fileMetadata.data.thumbnailLink) {
-      const thumbnailUrl = fileMetadata.data.thumbnailLink
+      let thumbnailUrl = fileMetadata.data.thumbnailLink
 
-      // Modificar tamaño
-      const sizeMap: Record<string, number> = {
-        small: 200,
-        medium: 400,
-        large: 800,
+      // Google Drive devuelve URLs como: https://drive-thumbnail.googleusercontent.com/d/{id}=s
+      // Necesitamos reemplazar el parámetro de tamaño =s con el tamaño deseado
+      const sizeMap: Record<string, string> = {
+        small: 'w200-h200',
+        medium: 'w400-h400',
+        large: 'w800-h800',
       }
-      const dimension = sizeMap[size] || 200
-      const resizedUrl = `${thumbnailUrl}=w${dimension}-h${dimension}`
+      const sizeParam = sizeMap[size] || 'w200-h200'
+
+      // Reemplazar el parámetro de tamaño existente (=s, =w320, etc)
+      const resizedUrl = thumbnailUrl.replace(/=w?\d+.*$/, `=${sizeParam}`)
 
       try {
         const thumbnailResponse = await fetch(resizedUrl, {

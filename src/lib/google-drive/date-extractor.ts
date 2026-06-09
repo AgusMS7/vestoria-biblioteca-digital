@@ -126,38 +126,53 @@ export function extractYearMonthFromMetadata(
   let year: number | undefined
   let month: number | undefined
 
-  // Intenta extraer fecha completa del nombre: YYYYMMDD o similar
-  // Patrones: 20190523, 2019-05-23, 2019_05_23
-  const fullDateMatch = fileName.match(/(\d{4})[-_]?(\d{2})[-_]?(\d{2})/)
-  if (fullDateMatch) {
-    const y = parseInt(fullDateMatch[1], 10)
-    const m = parseInt(fullDateMatch[2], 10)
-    if (isValidYear(y) && m >= 1 && m <= 12) {
-      return { year: y, month: m }
-    }
-  }
+  // Nivel 3: Fecha válida en nombre (MÁXIMA CONFIANZA en patrones claros)
+  // Patrones específicos que indicán fecha real:
+  // - IMG_YYYYMMDD (cámaras estándar)
+  // - PXL_YYYYMMDD (Google Pixel)
+  // - DSC_YYYYMMDD (Sony/Nikon)
+  // - DCIM_YYYYMMDD (DCIM folders)
+  // - YYYY-MM-DD, YYYY_MM_DD, YYYYMMDD (claros)
 
-  // Intenta extraer solo año del nombre
-  // Patrones más flexible: puede estar en cualquier lugar, no necesariamente 20XX
-  const yearMatch = fileName.match(/19\d{2}|20\d{2}/)
-  if (yearMatch) {
-    year = parseInt(yearMatch[0], 10)
-    if (isValidYear(year)) {
-      return { year }
-    }
-  }
-
-  // Intenta patrones comunes de cámara: IMG_YYYYMMDD, DCIM_YYYYMMDD, etc
-  const cameraDateMatch = fileName.match(/IMG[_-]?(\d{4})[_-]?(\d{2})[_-]?(\d{2})/i)
+  // 3.1: Patrones estrictos de cámara (IMG, PXL, DSC, DCIM)
+  const cameraDateMatch = fileName.match(/(?:IMG|PXL|DSC|DCIM)[_-]?(\d{4})[_-]?(\d{2})[_-]?(\d{2})/i)
   if (cameraDateMatch) {
     const y = parseInt(cameraDateMatch[1], 10)
     const m = parseInt(cameraDateMatch[2], 10)
+    // Validar mes
     if (isValidYear(y) && m >= 1 && m <= 12) {
+      // Validar día (básico)
+      const d = parseInt(cameraDateMatch[3], 10)
+      if (d >= 1 && d <= 31) {
+        return { year: y, month: m }
+      }
+    }
+  }
+
+  // 3.2: Patrón claro YYYY-MM-DD o YYYY_MM_DD o YYYYMMDD aislado
+  // IMPORTANTE: Debe estar rodeado de separadores o límites, NO en el medio de números
+  const isoDateMatch = fileName.match(/(^|[-_\s])(\d{4})[-_](\d{2})[-_](\d{2})([-_\s]|$)/)
+  if (isoDateMatch) {
+    const y = parseInt(isoDateMatch[2], 10)
+    const m = parseInt(isoDateMatch[3], 10)
+    const d = parseInt(isoDateMatch[4], 10)
+    if (isValidYear(y) && m >= 1 && m <= 12 && d >= 1 && d <= 31) {
       return { year: y, month: m }
     }
   }
 
-  // Usa modifiedTime como último recurso (incluye mes si está disponible)
+  // 3.3: Año aislado (1900-2999)
+  // IMPORTANTE: Debe estar rodeado de separadores, NO en secuencia de números arbitrarios
+  // Evita matches como 1654090_10153892063535725_1771742050_n.jpg → 6540
+  const isoYearMatch = fileName.match(/(^|[-_\s()])([1-2]\d{3})([-_\s()]|$)/)
+  if (isoYearMatch) {
+    const y = parseInt(isoYearMatch[2], 10)
+    if (isValidYear(y)) {
+      return { year: y }
+    }
+  }
+
+  // Nivel 4: modifiedTime (media confianza)
   // IMPORTANTE: modifiedTime es menos confiable (puede ser fecha de modificación en Drive, no del recuerdo)
   // Pero es mejor que nada para archivos sin metadata
   if (modifiedTime) {
