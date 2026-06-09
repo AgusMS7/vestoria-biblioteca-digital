@@ -43,10 +43,15 @@ export function Header({
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <motion.div
-              className="flex items-center justify-center lg:justify-start"
+              className="flex items-center justify-center lg:justify-start gap-3"
               whileHover={{ scale: 1.01 }}
               transition={{ type: 'spring', stiffness: 400 }}
             >
+              <img
+                src="/book-gift-present-svgrepo-com.svg"
+                alt="Biblioteca Rosanna"
+                className="w-8 h-8 sm:w-10 sm:h-10"
+              />
               <h1 className="text-3xl sm:text-4xl header-title-engraved tracking-wide">
                 Biblioteca Rosanna
               </h1>

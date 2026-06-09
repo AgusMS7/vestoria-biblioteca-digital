@@ -2,8 +2,11 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Biblioteca Rosana — Álbumes Familiares",
+  title: "Biblioteca Rosanna — Álbumes Familiares",
   description: "Una biblioteca de álbumes de fotos familiares con estética vintage de madera",
+  icons: {
+    icon: '/book-gift-present-svgrepo-com.svg',
+  },
 };
 
 export const viewport: Viewport = {
