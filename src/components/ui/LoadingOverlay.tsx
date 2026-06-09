@@ -47,8 +47,8 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
           transition={{ duration: 0.3 }}
           className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
           style={{
-            backdropFilter: 'blur(8px)',
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+            backdropFilter: 'blur(12px)',
+            backgroundColor: 'rgba(0, 0, 0, 0.35)',
           }}
           onClick={(e) => e.stopPropagation()}
         >
@@ -66,7 +66,7 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
             className="relative w-40 h-40 sm:w-48 sm:h-48"
             ref={containerRef}
             style={{
-              filter: 'drop-shadow(0 0 20px rgba(0, 0, 0, 0.05))',
+              filter: 'drop-shadow(0 8px 24px rgba(139, 115, 85, 0.3))',
             }}
           />
 
