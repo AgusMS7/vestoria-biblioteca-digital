@@ -988,6 +988,63 @@ Las imágenes no se mostraban porque:
 - ✅ Precarga en visor intacta
 - ✅ No se descarga data innecesaria (todo client-side)
 
-**Última actualización:** Enero 2025
-**Versión del documento:** 1.3.0
-**Última fase completada:** Agrupación Cronológica (Iteración 4)
+## 🔧 Mejoras Finales Implementadas (Iteración 5 - Junio 2026)
+
+### 1. Sistema de Fechas Corregido (CRÍTICO)
+**Problema:** `createdTime` representa fecha de subida a Drive, no fecha del recuerdo
+
+**Soluciones:**
+- ❌ Eliminado completamente `createdTime` de todas las consultas a Google Drive
+- ✅ Prioridad ahora: EXIF → Nombre → modifiedTime (último recurso)
+- ✅ Nueva función `extractYearMonthFromMetadata()` extrae año Y mes
+- ✅ Validación: año debe estar entre 1900 y actualidad
+- ✅ Archivos sin año válido: No muestran etiqueta, se agrupan al final con separador visual
+
+**Archivos modificados:**
+- `src/lib/google-drive/date-extractor.ts` - Eliminado createdTime
+- `src/lib/google-drive/mapper.ts` - Usa solo modifiedTime
+- `src/lib/google-drive/service.ts` - Campos solicitados a Drive actualizados
+- `src/types/media.ts` - Agregado campo `month?: number`
+
+### 2. Agrupación por Mes-Año (NO solo año)
+**Antes:** Diciembre 2025 mostraba solo "2025"
+**Ahora:** "Diciembre de 2025"
+
+**Implementación:**
+- Extracción inteligente de mes desde:
+  1. Patrones de fecha en nombre (YYYYMMDD)
+  2. modifiedTime de Google Drive
+- Formato: Mes singular en español + "de" + año
+- Ordenamiento correcto: Más recientes primero por defecto, asc/desc seleccionable
+- Archivos sin fecha: Separador visual sutil, sin etiqueta
+
+**Archivos modificados:**
+- `src/app/album/[id]/page.tsx` - Nueva lógica de agrupación groupedByYearMonth
+
+### 3. Miniaturas de Video
+**Antes:** Placeholder gris (error de UX)
+**Ahora:**
+- Intenta usar `thumbnailLink` de Google Drive (fotogramas reales)
+- Si no disponible: retorna 204 No Content (cliente muestra placeholder elegante con ícono play)
+- Nunca espacios vacíos en grilla
+
+**Archivos modificados:**
+- `src/app/api/media/[id]/thumbnail/route.ts` - Lógica mejorada para videos
+
+### 4. Footer Eliminado Completamente
+- Removido div footer entero de `src/app/page.tsx`
+- Página termina cuando termina el contenido
+
+### 5. Header: "Rosana" → "Rosanna"
+- Corregido en `src/app/page.tsx`
+- Corregido en `src/components/layout/Header.tsx`
+
+### 6. Validación Final
+- ✅ Build completado exitosamente
+- ✅ TypeScript: sin errores
+- ✅ Git: Commit realizado
+- ⏳ Verificación visual: pendiente (en navegador)
+
+**Última actualización:** Junio 2026
+**Versión del documento:** 1.4.0
+**Última fase completada:** Revisión Integral Final (Iteración 5)
