@@ -1,5 +1,6 @@
 import type { Album } from '@/types/album'
 import { extractYearMonthFromMetadata } from './date-extractor'
+import { getAlbumColor } from './color-palette'
 import type { Media } from '@/types/media'
 import type { Category } from '@/types/category'
 
@@ -84,7 +85,7 @@ export function mapToAlbum(
     coverImage,
     mediaCount: mediaItems.length,
     media: mediaItems,
-    dominantColor: { h: 0, s: 0, l: 50 }, // Color por defecto, futuro: extraer de la portada
+    dominantColor: getAlbumColor(id), // Color asignado determinísticamente basado en ID
     description: undefined,
   }
 }
