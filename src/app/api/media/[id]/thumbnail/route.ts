@@ -102,24 +102,20 @@ export async function GET(
               'Access-Control-Allow-Origin': '*',
             },
           })
+        } else {
+          console.warn(`ThumbnailLink fetch failed with status ${thumbnailResponse.status} for ${fileId}`)
+          console.warn(`URL attempted: ${resizedUrl}`)
         }
       } catch (error) {
         console.error('Error fetching thumbnailLink:', error)
-        // Para videos sin thumbnailLink disponible, retornar 204 (placeholder en cliente)
-        if (isVideo) {
-          return new Response(null, {
-            status: 204,
-            headers: {
-              'Cache-Control': 'public, max-age=86400',
-              'Access-Control-Allow-Origin': '*',
-            },
-          })
-        }
-        // Para imágenes, continuar con compresión local
+        console.error(`URL attempted: ${resizedUrl}`)
+        // Continuar con fallback
       }
+    } else {
+      console.warn(`No thumbnailLink found for file ${fileId}`)
     }
 
-    // Para videos sin thumbnailLink, retornar 204 (no content)
+    // Fallback para videos sin thumbnailLink o fetch fallido
     if (isVideo) {
       return new Response(null, {
         status: 204,
