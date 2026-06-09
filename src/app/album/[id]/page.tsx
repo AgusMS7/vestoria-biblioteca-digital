@@ -377,16 +377,6 @@ export default function AlbumPage() {
 
   const colors = album ? getAlbumPageColors(album.dominantColor) : null
 
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-zinc-400">Cargando álbum...</p>
-        </div>
-      </div>
-    )
-  }
-
   if (error || !album || !colors) {
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">

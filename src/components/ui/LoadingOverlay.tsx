@@ -63,10 +63,10 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
 
           {/* Animation container */}
           <div
-            className="relative w-64 h-64 sm:w-80 sm:h-80"
+            className="relative w-40 h-40 sm:w-48 sm:h-48"
             ref={containerRef}
             style={{
-              filter: 'drop-shadow(0 0 30px rgba(0, 0, 0, 0.05))',
+              filter: 'drop-shadow(0 0 20px rgba(0, 0, 0, 0.05))',
             }}
           />
 

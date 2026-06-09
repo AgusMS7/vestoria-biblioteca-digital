@@ -798,6 +798,113 @@ export async function getAlbum(id: string) {
 
 ---
 
+## 🎬 Experiencias de Carga Emotivas (Iteración 6-7)
+
+### Iteración 7: Integración de Animación Lottie
+
+**Cambio reciente**: Se reemplazaron las animaciones CSS/Framer Motion con una **animación Lottie elegida por el usuario** (`book-loading.json`).
+
+**Archivo nuevo**: `src/components/ui/LoadingOverlay.tsx` (84 líneas)
+
+**Dependencia agregada**: `lottie-web` (librería oficial para reproducir animaciones Lottie)
+
+### LoadingOverlay Component
+
+**Propósito**: Overlay inteligente que:
+- Muestra animación Lottie centrada
+- Difumina el contenido detrás (blur: 8px)
+- Aplica overlay ligero y sutil (rgba(255,255,255,0.08))
+- Bloquea interacción (clicks, scroll, touch)
+- Se desvanece suavemente cuando termina
+
+**Ubicación**: `src/components/ui/LoadingOverlay.tsx`
+
+**Props**:
+```typescript
+interface LoadingOverlayProps {
+  isVisible: boolean              // Controla visibilidad
+  animationData?: string          // Path a JSON (default: '/book-loading.json')
+}
+```
+
+**Comportamiento**:
+1. Se muestra sobre el contenido actual (z-index: 50)
+2. Difumina el fondo: `backdrop-filter: blur(8px)`
+3. Overlay muy sutil: `rgba(255,255,255,0.08)` (casi imperceptible)
+4. Animación Lottie se reproduce en loop automático
+5. Bloquea interacción: `pointer-events-auto` en overlay
+6. Previene scroll: `overflow: hidden` en body
+7. Se desvanece con transición smooth (0.3s)
+
+**Animación Lottie**:
+- Archivo: `public/book-loading.json`
+- Librería: `lottie-web`
+- Autoplay: true
+- Loop: true
+- Renderer: SVG (nítido en todos los dispositivos)
+
+**Sizing**:
+- Desktop/Tablet: 320x320px (w-80 h-80)
+- Mobile: 256x256px (w-64 h-64)
+- Mantiene proporciones, no deforma
+- Ligera sombra de caída (drop-shadow: 0 0 30px)
+
+**Integración en páginas**:
+
+```typescript
+// En src/app/page.tsx
+import { LoadingOverlay } from '@/components'
+
+export default function LibraryPage() {
+  const [loading, setLoading] = useState(true)
+
+  return (
+    <div>
+      <LoadingOverlay isVisible={loading} />
+      {/* Resto de contenido */}
+    </div>
+  )
+}
+
+// En src/app/album/[id]/page.tsx
+export default function AlbumPage() {
+  const [loading, setLoading] = useState(true)
+
+  return (
+    <div>
+      <LoadingOverlay isVisible={loading} />
+      {/* Resto de contenido */}
+    </div>
+  )
+}
+```
+
+**CSS del Body**:
+```css
+/* Mientras isVisible=true */
+body {
+  overflow: hidden !important;
+}
+```
+
+**Efecto Visual**:
+```
+[Contenido de fondo]
+    ↓ (difuminado con blur: 8px)
+    ↓
+[Overlay muy suave rgba(255,255,255,0.08)]
+    ↓
+[Animación Lottie centrada 320x320px]
+```
+
+**Experiencia User**:
+1. Usuario ve contenido detrás (no desaparece)
+2. Todo está difuminado sutilmente (blur evita distracción)
+3. Overlay muy ligero no oscurece (no crea sensación de modal corporativo)
+4. Animación Lottie es el punto focal
+5. Sin texto, sin "Cargando...", sin mensajes
+6. La animación comunica el estado de carga por sí sola
+
 ## 🎬 Experiencias de Carga Emotivas (Iteración 6)
 
 ### Filosofía
