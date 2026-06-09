@@ -51,6 +51,10 @@ export function Header({
                 src="/book-gift-present-svgrepo-com.svg"
                 alt="Biblioteca Rosanna"
                 className="w-8 h-8 sm:w-10 sm:h-10"
+                style={{
+                  filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.7)) drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5)) drop-shadow(0 -1px 0 rgba(209, 183, 155, 0.25))',
+                  color: 'hsl(35 50% 72%)',
+                }}
               />
               <h1 className="text-3xl sm:text-4xl header-title-engraved tracking-wide">
                 Biblioteca Rosanna
