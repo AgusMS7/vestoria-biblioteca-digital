@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Header, AlbumCard, TextureFilters } from '@/components'
+import { Header, AlbumCard, TextureFilters, PhysicalAlbumLoader } from '@/components'
 import type { Category, Album } from '@/types'
 
 function WoodShelf({
@@ -191,13 +191,7 @@ export default function LibraryPage() {
 
           <div className="relative z-10 py-4 sm:py-6">
             {loading ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20"
-              >
-                <p className="text-xl text-amber-200/80">Cargando álbumes...</p>
-              </motion.div>
+              <PhysicalAlbumLoader />
             ) : error ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}

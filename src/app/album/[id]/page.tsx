@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Play, Calendar, ArrowUp, ArrowDown, Presentation } from 'lucide-react'
-import { FullscreenViewer, TextureFilters } from '@/components'
+import { FullscreenViewer, TextureFilters, AlbumOpeningTransition } from '@/components'
 import type { Album, Media } from '@/types'
 
 type YearSortOrder = 'asc' | 'desc'
@@ -269,6 +269,7 @@ export default function AlbumPage() {
   const [viewerIndex, setViewerIndex] = useState(0)
   const [viewerAutoPlay, setViewerAutoPlay] = useState(false)
   const [yearSortOrder, setYearSortOrder] = useState<YearSortOrder>('desc')
+  const [isOpeningTransition, setIsOpeningTransition] = useState(true)
 
   // Agrupar medios por mes-año - DEBE estar antes de los early returns
   interface MediaGroup {
@@ -355,6 +356,7 @@ export default function AlbumPage() {
       try {
         setLoading(true)
         setError(null)
+        setIsOpeningTransition(true)
 
         const response = await fetch(`/api/albums/${id}`)
         if (!response.ok) {
@@ -633,6 +635,16 @@ export default function AlbumPage() {
           />
         )}
       </AnimatePresence>
+
+      {album && (
+        <AlbumOpeningTransition
+          isOpen={isOpeningTransition}
+          coverImage={album.coverImage}
+          coverTitle={album.title}
+          dominantColor={album.dominantColor}
+          onComplete={() => setIsOpeningTransition(false)}
+        />
+      )}
     </div>
   )
 }

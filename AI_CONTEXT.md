@@ -8,7 +8,7 @@ Este documento contiene todas las decisiones arquitectónicas, reglas de desarro
 - **Stack**: Next.js 16+ (App Router), TypeScript, Tailwind CSS, googleapis
 - **Versión Actual**: 0.1.0
 - **Estado**: En desarrollo activo
-- **Última Actualización**: Enero 2025
+- **Última Actualización**: Junio 2026
 
 ---
 
@@ -795,6 +795,151 @@ export async function getAlbum(id: string) {
   if (!id) throw new Error('...')
 }
 ```
+
+---
+
+## 🎬 Experiencias de Carga Emotivas (Iteración 6)
+
+### Filosofía
+
+Las pantallas de carga en Vestoria no son técnicas. Transmiten la sensación de **abrir un álbum físico de recuerdos**.
+
+### PhysicalAlbumLoader
+
+**Archivo**: `src/components/ui/PhysicalAlbumLoader.tsx`
+
+**Propósito**: Reemplaza texto genérico "Cargando..." al abrir la biblioteca principal.
+
+**Características**:
+- Animación de álbum de tapa dura pasando páginas
+- Ciclo: Página se cierra → Se abre → Se cierra (3 segundos)
+- Paleta de colores sobria (marrón vintage, tonos tierra)
+- Texto sutil: "Abriendo recuerdos..." con fade in/out
+- Sin emojis, sin spinners genéricos, sin barras de progreso
+- CSS puro + Framer Motion para fluidez
+
+**Ubicación visual**:
+```
+┌─────────────────────────┐
+│                         │
+│    Álbum cerrado        │  ← Tapa dura (marrón)
+│    Pasando páginas      │    Marfil/crema adentro
+│    Lentamente           │    Efecto 3D con shadows
+│                         │
+└─────────────────────────┘
+```
+
+**Colores**:
+- Cover (tapa): `#3d2817` con gradiente a `#2d1f14`
+- Pages (páginas): `#f5f0e8` y `#fffbf5`
+- Spine (lomo): `#1a0f08`
+- Text (texto): `#c9a882` (arena)
+
+**Duración**: 3 segundos por ciclo (infinito hasta que cargan datos)
+
+**Uso**:
+```typescript
+// En src/app/page.tsx
+import { PhysicalAlbumLoader } from '@/components'
+
+{loading ? (
+  <PhysicalAlbumLoader />
+) : (
+  // Contenido
+)}
+```
+
+### AlbumOpeningTransition
+
+**Archivo**: `src/components/ui/AlbumOpeningTransition.tsx`
+
+**Propósito**: Transición elegante cuando se abre un álbum desde la biblioteca.
+
+**Comportamiento**:
+1. Usuario hace click en un álbum
+2. La portada del álbum se expande suavemente desde su posición
+3. Fondo oscuro con color dominante del álbum (semi-transparente)
+4. Sensación de "apertura" física
+5. Durée: 600ms (no interfiere con navegación)
+
+**Props**:
+```typescript
+interface AlbumOpeningTransitionProps {
+  isOpen: boolean                              // Controla si se muestra
+  coverImage: string                           // URL de la portada
+  coverTitle: string                           // Título del álbum
+  dominantColor: { h: number; s: number; l: number } // Color tema
+  onComplete?: () => void                      // Callback al terminar
+}
+```
+
+**Animación**:
+- Scale: 0.8 → 1.1 (expande)
+- Opacity: 0 → 1 (aparece)
+- Y: 40px → 0 (sube ligeramente)
+- Transición cubic-bezier `[0.25, 0.46, 0.45, 0.94]` (suave)
+
+**Background**:
+- Color: `hsl(h, s, l-15%)` (versión oscura del dominantColor)
+- Opacity: 0.85 (sutilmente visible)
+
+**Efectos visuales**:
+- Gradient overlay: blanco transparente arriba (highlights)
+- Gradient fade en la base (legibilidad del título)
+- Shadow profunda: `0 40px 80px rgba(0, 0, 0, 0.6)`
+
+**Restricciones cumplidas**:
+- ❌ No pantalla negra
+- ❌ No pantalla blanca
+- ❌ No reemplaza portada por loader
+- ✅ La portada participa en la transición
+- ✅ Duración 300-700ms (600ms)
+- ✅ Coherente con identidad visual
+
+**Uso**:
+```typescript
+// En src/app/album/[id]/page.tsx
+const [isOpeningTransition, setIsOpeningTransition] = useState(true)
+
+useEffect(() => {
+  // Al cargar el álbum, mostrar transición
+  setIsOpeningTransition(true)
+}, [id])
+
+// En el render:
+{album && (
+  <AlbumOpeningTransition
+    isOpen={isOpeningTransition}
+    coverImage={album.coverImage}
+    coverTitle={album.title}
+    dominantColor={album.dominantColor}
+    onComplete={() => setIsOpeningTransition(false)}
+  />
+)}
+```
+
+**Flujo user**:
+1. Usuario en biblioteca ve PhysicalAlbumLoader mientras se cargan álbumes
+2. Usuario hace click en un álbum
+3. Navega a `/album/[id]`
+4. Página carga, AlbumOpeningTransition inicia (600ms)
+5. Portada se expande, fondo oscuro aparece
+6. Al terminar, transición se oculta (pointerEvents: none)
+7. Usuario ve el contenido del álbum completo
+
+### Compatibilidad
+
+- ✅ Desktop: Animaciones suaves
+- ✅ Tablet: Animaciones suaves, tamaños responsivos
+- ✅ Mobile: Animaciones suaves, reducidas si prefers-reduced-motion
+- ⚠️ Smart TV Tizen: Framer Motion puede ser lento, fallback a estático
+
+### Mejoras Futuras
+
+- [ ] Detectar `prefers-reduced-motion` para degradación accesible
+- [ ] Variantes para dispositivos lentos (reducir animaciones complejas)
+- [ ] Transiciones de página entre álbumes (sin recarga completa)
+- [ ] Atajos de teclado (Esc para cerrar, Enter para abrir)
 
 ---
 
