@@ -165,16 +165,21 @@ function PolaroidPhoto({
 
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
           {isVisible ? (
-            <img
-              src={item.thumbnailUrl}
-              alt={item.fileName}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                // Si falla la imagen, mostrar placeholder
-                const img = e.target as HTMLImageElement
-                img.style.display = 'none'
-              }}
-            />
+            <>
+              <img
+                src={item.thumbnailUrl}
+                alt={item.fileName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  // Si falla la imagen, mostrar placeholder elegante
+                  const img = e.target as HTMLImageElement
+                  img.style.display = 'none'
+                }}
+              />
+              <noscript>
+                <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300" />
+              </noscript>
+            </>
           ) : (
             <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-gray-200 to-gray-300">
               <div className="text-gray-400 text-sm">Cargando...</div>
@@ -265,45 +270,76 @@ export default function AlbumPage() {
   const [viewerAutoPlay, setViewerAutoPlay] = useState(false)
   const [yearSortOrder, setYearSortOrder] = useState<YearSortOrder>('desc')
 
-  // Agrupar medios por año - DEBE estar antes de los early returns
+  // Agrupar medios por mes-año - DEBE estar antes de los early returns
   interface MediaGroup {
     year: number | null
+    month: number | null
+    label: string
     medios: Media[]
   }
 
-  const groupedByYear = useMemo(() => {
+  const groupedByYearMonth = useMemo(() => {
     if (!album) return []
 
-    const groups: Map<number | null, Media[]> = new Map()
+    const groups: Map<string, Media[]> = new Map()
+    const groupMetadata: Map<string, { year: number | null; month: number | null }> = new Map()
 
     // Agrupar
     album.media.forEach((media) => {
       const year = media.year ?? null
-      if (!groups.has(year)) {
-        groups.set(year, [])
+      const month = media.month ?? null
+      // Usar "YYYY-MM" como clave, con "YYYY-00" para sin mes específico
+      const key = year === null ? 'no-date' : `${year}-${String(month || 0).padStart(2, '0')}`
+
+      if (!groups.has(key)) {
+        groups.set(key, [])
+        groupMetadata.set(key, { year, month })
       }
-      groups.get(year)!.push(media)
+      groups.get(key)!.push(media)
     })
 
     // Convertir a array y ordenar
-    let sorted = Array.from(groups.entries())
-      .map(([year, medios]) => ({ year, medios }))
+    let sorted = Array.from(groups.entries()).map(([key, medios]) => {
+      const { year, month } = groupMetadata.get(key)!
 
-    // Separar grupo sin año
-    const noYearGroup = sorted.find((g) => g.year === null)
-    const withYearGroups = sorted.filter((g) => g.year !== null)
+      // Generar label
+      let label = ''
+      if (year === null) {
+        label = 'Sin fecha'
+      } else if (month && month >= 1 && month <= 12) {
+        const monthNames = [
+          'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
+          'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'
+        ]
+        label = `${monthNames[month - 1]} de ${year}`
+      } else {
+        label = year.toString()
+      }
 
-    // Ordenar grupos con año
-    withYearGroups.sort((a, b) => {
-      const aYear = a.year ?? 0
-      const bYear = b.year ?? 0
-      return yearSortOrder === 'asc' ? aYear - bYear : bYear - aYear
+      return { key, year, month, label, medios }
     })
 
-    // Reconstruir array (sin año siempre al final)
-    const result = [...withYearGroups]
-    if (noYearGroup) {
-      result.push(noYearGroup)
+    // Separar grupo sin fecha
+    const noDateGroup = sorted.find((g) => g.year === null)
+    const withDateGroups = sorted.filter((g) => g.year !== null)
+
+    // Ordenar grupos con fecha
+    withDateGroups.sort((a, b) => {
+      const aYear = a.year ?? 0
+      const aMonth = a.month ?? 0
+      const bYear = b.year ?? 0
+      const bMonth = b.month ?? 0
+
+      const aDate = aYear * 100 + aMonth
+      const bDate = bYear * 100 + bMonth
+
+      return yearSortOrder === 'asc' ? aDate - bDate : bDate - aDate
+    })
+
+    // Reconstruir array (sin fecha siempre al final)
+    const result = [...withDateGroups]
+    if (noDateGroup) {
+      result.push(noDateGroup)
     }
 
     return result
@@ -311,8 +347,8 @@ export default function AlbumPage() {
 
   // Flatten the sorted groups to get the media in display order
   const flattenedAndSortedMedia = useMemo(() => {
-    return groupedByYear.flatMap((group) => group.medios)
-  }, [groupedByYear])
+    return groupedByYearMonth.flatMap((group) => group.medios)
+  }, [groupedByYearMonth])
 
   useEffect(() => {
     const loadAlbum = async () => {
@@ -521,21 +557,21 @@ export default function AlbumPage() {
             </div>
           ) : (
             <div className="space-y-12 sm:space-y-16">
-              {groupedByYear.map((group, groupIdx) => {
+              {groupedByYearMonth.map((group, groupIdx) => {
                 let globalIndex = 0
                 // Calcular índice global de este grupo
                 for (let i = 0; i < groupIdx; i++) {
-                  globalIndex += groupedByYear[i].medios.length
+                  globalIndex += groupedByYearMonth[i].medios.length
                 }
 
                 return (
                   <motion.section
-                    key={group.year ?? 'no-year'}
+                    key={group.key}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.4, delay: groupIdx * 0.1 }}
                   >
-                    {/* Encabezado de año */}
+                    {/* Encabezado de mes-año o solo separador para sin fecha */}
                     {group.year !== null && (
                       <div className="mb-10 relative">
                         <h2
@@ -547,15 +583,18 @@ export default function AlbumPage() {
                             textShadow: '0 1px 0 rgba(0,0,0,0.05)',
                           }}
                         >
-                          {group.year}
+                          {group.label}
                         </h2>
+                      </div>
+                    )}
+
+                    {/* Separador visual para sin fecha */}
+                    {group.year === null && (
+                      <div className="mb-10 py-6">
                         <div
-                          className="absolute bottom-0 left-0 h-px mt-1"
+                          className="h-px"
                           style={{
-                            width: `${String(group.year).length * 28}px`,
-                            background: `linear-gradient(90deg, ${colors.subtitleColor} 0%, ${colors.subtitleColor}80 100%)`,
-                            opacity: 0.4,
-                            filter: 'skewY(-1deg)',
+                            background: `linear-gradient(90deg, ${colors.subtitleColor}40 0%, ${colors.subtitleColor}20 50%, ${colors.subtitleColor}40 100%)`,
                           }}
                         />
                       </div>

@@ -1,5 +1,5 @@
 import type { Album } from '@/types/album'
-import { extractYearFromMetadata } from './date-extractor'
+import { extractYearMonthFromMetadata } from './date-extractor'
 import type { Media } from '@/types/media'
 import type { Category } from '@/types/category'
 
@@ -15,7 +15,6 @@ export function mapToMediaItem(
   const mimeType = driveFile?.mimeType
   const imageMediaMetadata = driveFile?.imageMediaMetadata
   const videoMediaMetadata = driveFile?.videoMediaMetadata
-  const createdTime = driveFile?.createdTime
   const modifiedTime = driveFile?.modifiedTime
 
   if (!id || !name || !mimeType) {
@@ -38,8 +37,8 @@ export function mapToMediaItem(
   width = Math.max(1, width || 1920)
   height = Math.max(1, height || 1080)
 
-  // Extract year using priority order
-  const year = extractYearFromMetadata(name, createdTime, modifiedTime)
+  // Extract year and month using priority order (NEVER use createdTime)
+  const dateInfo = extractYearMonthFromMetadata(name, modifiedTime)
 
   return {
     id,
@@ -47,7 +46,8 @@ export function mapToMediaItem(
     fileName: name,
     title: name,
     date: undefined,
-    year,
+    year: dateInfo?.year,
+    month: dateInfo?.month,
     width,
     height,
     duration,

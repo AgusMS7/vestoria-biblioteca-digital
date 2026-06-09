@@ -165,7 +165,7 @@ async function getAlbumDetails(
     const filesResponse = await drive.files.list({
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, createdTime, modifiedTime)',
+      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })
@@ -221,7 +221,7 @@ export async function getMedia(albumId: string): Promise<Media[]> {
     const response = await drive.files.list({
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, createdTime, modifiedTime)',
+      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })
@@ -258,7 +258,7 @@ export async function getAlbumCover(albumId: string): Promise<Media | null> {
     const response = await drive.files.list({
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
-      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, createdTime, modifiedTime)',
+      fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })

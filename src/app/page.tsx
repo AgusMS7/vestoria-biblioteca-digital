@@ -249,20 +249,7 @@ export default function LibraryPage() {
         />
       </div>
 
-      <footer className="wood-dark py-5 relative">
-        <div className="absolute inset-0 bg-black/25" />
-        <div
-          className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)',
-          }}
-        />
-        <div className="max-w-6xl mx-auto px-4 text-center relative z-10">
-          <p className="text-amber-200/70 text-sm tracking-wide">
-            Biblioteca Rosana — Recuerdos que duran para siempre
-          </p>
-        </div>
-      </footer>
+
     </div>
   )
 }

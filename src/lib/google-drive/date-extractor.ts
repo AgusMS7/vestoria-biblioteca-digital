@@ -19,12 +19,11 @@ function isValidYear(year: number): boolean {
 /**
  * Extrae el año de un archivo multimedia usando múltiples fuentes de información
  *
- * Prioridades:
+ * Prioridades (NUNCA usar createdTime):
  * 1. EXIF DateTimeOriginal (para imágenes)
  * 2. Metadata de grabación de vídeo
  * 3. Patrón en nombre de archivo (ej: IMG_20190523.jpg)
- * 4. createdTime de Google Drive
- * 5. modifiedTime de Google Drive
+ * 4. modifiedTime de Google Drive (como último recurso)
  *
  * Retorna undefined si no puede determinarse el año o si es futuro/inválido
  */
@@ -32,7 +31,6 @@ export async function extractYearFromMedia(
   buffer: Buffer,
   mimeType: string,
   fileName: string,
-  createdTime?: string,
   modifiedTime?: string
 ): Promise<number | undefined> {
   // Paso 1: Intentar EXIF para imágenes
@@ -63,22 +61,7 @@ export async function extractYearFromMedia(
     }
   }
 
-  // Paso 3: Usar createdTime de Google Drive
-  if (createdTime) {
-    try {
-      const date = new Date(createdTime)
-      if (!isNaN(date.getTime())) {
-        const year = date.getFullYear()
-        if (isValidYear(year)) {
-          return year
-        }
-      }
-    } catch (error) {
-      // Ignorar error
-    }
-  }
-
-  // Paso 4: Usar modifiedTime de Google Drive
+  // Paso 3: Usar modifiedTime de Google Drive (último recurso)
   if (modifiedTime) {
     try {
       const date = new Date(modifiedTime)
@@ -100,13 +83,14 @@ export async function extractYearFromMedia(
 /**
  * Extrae año de forma simplificada cuando no tenemos buffer
  * (para casos donde solo tenemos metadatos sin descargar el archivo)
+ *
+ * IMPORTANTE: No usa createdTime (representa fecha de subida, no del recuerdo)
  */
 export function extractYearFromMetadata(
   fileName: string,
-  createdTime?: string,
   modifiedTime?: string
 ): number | undefined {
-  // Patrón en nombre
+  // Patrón en nombre (primera prioridad)
   const yearMatch = fileName.match(/20\d{2}/)
   if (yearMatch) {
     const year = parseInt(yearMatch[0], 10)
@@ -115,19 +99,7 @@ export function extractYearFromMetadata(
     }
   }
 
-  // createdTime
-  if (createdTime) {
-    try {
-      const year = new Date(createdTime).getFullYear()
-      if (isValidYear(year)) {
-        return year
-      }
-    } catch (error) {
-      // Ignorar
-    }
-  }
-
-  // modifiedTime
+  // modifiedTime (último recurso)
   if (modifiedTime) {
     try {
       const year = new Date(modifiedTime).getFullYear()
@@ -140,4 +112,55 @@ export function extractYearFromMetadata(
   }
 
   return undefined
+}
+
+/**
+ * Extrae año Y mes de un archivo multimedia
+ *
+ * Retorna { year: number, month?: number } o null si no puede determinarse
+ */
+export function extractYearMonthFromMetadata(
+  fileName: string,
+  modifiedTime?: string
+): { year: number; month?: number } | null {
+  let year: number | undefined
+  let month: number | undefined
+
+  // Intenta extraer fecha completa del nombre: YYYYMMDD o similar
+  // Patrones: 20190523, 2019-05-23, 2019_05_23
+  const fullDateMatch = fileName.match(/(\d{4})[-_]?(\d{2})[-_]?(\d{2})/)
+  if (fullDateMatch) {
+    const y = parseInt(fullDateMatch[1], 10)
+    const m = parseInt(fullDateMatch[2], 10)
+    if (isValidYear(y) && m >= 1 && m <= 12) {
+      return { year: y, month: m }
+    }
+  }
+
+  // Intenta extraer solo año del nombre
+  const yearMatch = fileName.match(/20\d{2}/)
+  if (yearMatch) {
+    year = parseInt(yearMatch[0], 10)
+    if (isValidYear(year)) {
+      return { year }
+    }
+  }
+
+  // Usa modifiedTime como último recurso (incluye mes si está disponible)
+  if (modifiedTime) {
+    try {
+      const date = new Date(modifiedTime)
+      if (!isNaN(date.getTime())) {
+        year = date.getFullYear()
+        month = date.getMonth() + 1 // getMonth() retorna 0-11
+        if (isValidYear(year)) {
+          return { year, month }
+        }
+      }
+    } catch (error) {
+      // Ignorar
+    }
+  }
+
+  return null
 }

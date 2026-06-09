@@ -48,7 +48,7 @@ export function Header({
               transition={{ type: 'spring', stiffness: 400 }}
             >
               <h1 className="text-3xl sm:text-4xl header-title-engraved tracking-wide">
-                Biblioteca Rosana
+                Biblioteca Rosanna
               </h1>
             </motion.div>
 

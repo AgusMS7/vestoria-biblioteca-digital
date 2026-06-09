@@ -59,23 +59,7 @@ export async function GET(
     const isImage = mimeType.startsWith('image/')
     const isVideo = mimeType.startsWith('video/')
 
-    // Para vídeos: retornar siempre placeholder gris (no usar thumbnailLink verde)
-    if (isVideo) {
-      const grayPngBase64 =
-        'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg=='
-      const buffer = Buffer.from(grayPngBase64, 'base64')
-      return new Response(new Uint8Array(buffer), {
-        status: 200,
-        headers: {
-          'Content-Type': 'image/png',
-          'Content-Length': buffer.length.toString(),
-          'Cache-Control': 'no-cache, public, must-revalidate, max-age=0',
-          'Access-Control-Allow-Origin': '*',
-        },
-      })
-    }
-
-    // Intentar usar thumbnailLink de Google Drive (solo para imágenes)
+    // Intentar usar thumbnailLink de Google Drive (para imágenes y videos)
     if (fileMetadata.data.thumbnailLink) {
       const thumbnailUrl = fileMetadata.data.thumbnailLink
 
@@ -118,8 +102,29 @@ export async function GET(
         }
       } catch (error) {
         console.error('Error fetching thumbnailLink:', error)
-        // Continuar con compresión local
+        // Para videos sin thumbnailLink disponible, retornar 204 (placeholder en cliente)
+        if (isVideo) {
+          return new Response(null, {
+            status: 204,
+            headers: {
+              'Cache-Control': 'public, max-age=86400',
+              'Access-Control-Allow-Origin': '*',
+            },
+          })
+        }
+        // Para imágenes, continuar con compresión local
       }
+    }
+
+    // Para videos sin thumbnailLink, retornar 204 (no content)
+    if (isVideo) {
+      return new Response(null, {
+        status: 204,
+        headers: {
+          'Cache-Control': 'public, max-age=86400',
+          'Access-Control-Allow-Origin': '*',
+        },
+      })
     }
 
     // Si no hay thumbnailLink o falló, comprimir localmente

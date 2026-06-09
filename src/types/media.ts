@@ -9,6 +9,7 @@ export interface Media {
   title?: string
   date?: string
   year?: number
+  month?: number
   width: number
   height: number
   duration?: number
