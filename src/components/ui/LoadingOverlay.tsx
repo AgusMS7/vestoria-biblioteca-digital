@@ -45,8 +45,9 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="fixed inset-0 z-50 flex items-center justify-center pointer-events-auto"
+          className="fixed inset-0 flex items-center justify-center pointer-events-auto"
           style={{
+            zIndex: 9999,
             backdropFilter: 'blur(12px)',
             backgroundColor: 'rgba(0, 0, 0, 0.35)',
           }}
