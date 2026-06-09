@@ -138,7 +138,8 @@ export function extractYearMonthFromMetadata(
   }
 
   // Intenta extraer solo año del nombre
-  const yearMatch = fileName.match(/20\d{2}/)
+  // Patrones más flexible: puede estar en cualquier lugar, no necesariamente 20XX
+  const yearMatch = fileName.match(/19\d{2}|20\d{2}/)
   if (yearMatch) {
     year = parseInt(yearMatch[0], 10)
     if (isValidYear(year)) {
@@ -146,7 +147,19 @@ export function extractYearMonthFromMetadata(
     }
   }
 
+  // Intenta patrones comunes de cámara: IMG_YYYYMMDD, DCIM_YYYYMMDD, etc
+  const cameraDateMatch = fileName.match(/IMG[_-]?(\d{4})[_-]?(\d{2})[_-]?(\d{2})/i)
+  if (cameraDateMatch) {
+    const y = parseInt(cameraDateMatch[1], 10)
+    const m = parseInt(cameraDateMatch[2], 10)
+    if (isValidYear(y) && m >= 1 && m <= 12) {
+      return { year: y, month: m }
+    }
+  }
+
   // Usa modifiedTime como último recurso (incluye mes si está disponible)
+  // IMPORTANTE: modifiedTime es menos confiable (puede ser fecha de modificación en Drive, no del recuerdo)
+  // Pero es mejor que nada para archivos sin metadata
   if (modifiedTime) {
     try {
       const date = new Date(modifiedTime)
