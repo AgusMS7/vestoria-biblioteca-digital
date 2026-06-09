@@ -375,15 +375,13 @@ export default function AlbumPage() {
     loadAlbum()
   }, [id])
 
-  const colors = album ? getAlbumPageColors(album.dominantColor) : null
+  const colors = album ? getAlbumPageColors(album.dominantColor) : { header: '#606064', headerLight: '#707074', headerDark: '#505054', titleColor: '#f5f0e8', titleShadow: '#2d1f14', subtitleColor: '#c9a882', accent: '#8b7355', backBtnBg: '#c9a882', backBtnColor: '#2d1f14', ringColor: '#c9a882', ringHighlight: '#e8dcc8', buttonHue: 0, buttonSat: 20, buttonLight: 50, playBtnText: '#2d1f14' }
 
-  if (error || !album || !colors) {
+  if (error) {
     return (
       <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-xl text-zinc-400">
-            {error || 'Album no encontrado'}
-          </p>
+          <p className="text-xl text-zinc-400">{error}</p>
           <button
             onClick={() => router.push('/')}
             className="mt-4 px-6 py-2 rounded-lg bg-amber-600 text-white hover:opacity-90 transition-opacity"
@@ -415,200 +413,206 @@ export default function AlbumPage() {
       <TextureFilters />
       <LoadingOverlay isVisible={loading} />
 
-      <motion.header
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.5 }}
-        className="sticky top-0 z-40 relative"
-        style={{
-          background: `linear-gradient(180deg, ${colors.headerLight} 0%, ${colors.header} 60%, ${colors.headerDark} 100%)`,
-        }}
-      >
-        <div
-          className="absolute top-0 left-0 right-0 h-[2px]"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)',
-          }}
-        />
+      {album && (
+        <>
+          <motion.header
+            initial={{ y: -20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ duration: 0.5 }}
+            className="sticky top-0 z-40 relative"
+            style={{
+              background: `linear-gradient(180deg, ${colors.headerLight} 0%, ${colors.header} 60%, ${colors.headerDark} 100%)`,
+            }}
+          >
+            <div
+              className="absolute top-0 left-0 right-0 h-[2px]"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(255,255,255,0.2), transparent)',
+              }}
+            />
 
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 relative z-20">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <button
-                onClick={() => router.push('/')}
-                className="p-2.5 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
-                style={{
-                  background: `linear-gradient(145deg, ${colors.backBtnBg}, ${colors.ringColor})`,
-                  boxShadow:
-                    '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
-                }}
-              >
-                <ArrowLeft
-                  className="w-5 h-5"
-                  style={{ color: colors.backBtnColor }}
-                />
-              </button>
+            <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-5 relative z-20">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <button
+                    onClick={() => router.push('/')}
+                    className="p-2.5 rounded-full transition-all duration-200 hover:scale-110 active:scale-95 cursor-pointer"
+                    style={{
+                      background: `linear-gradient(145deg, ${colors.backBtnBg}, ${colors.ringColor})`,
+                      boxShadow:
+                        '0 2px 6px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.3)',
+                    }}
+                  >
+                    <ArrowLeft
+                      className="w-5 h-5"
+                      style={{ color: colors.backBtnColor }}
+                    />
+                  </button>
 
-              <div className="flex flex-col">
-                <h1
-                  className="text-xl sm:text-2xl font-semibold tracking-wide"
-                  style={{
-                    color: colors.titleColor,
-                    fontFamily: 'var(--font-display)',
-                    textShadow: `0 2px 4px ${colors.titleShadow}`,
-                  }}
-                >
-                  {album.title}
-                </h1>
-                <span
-                  className="text-sm font-medium tracking-wide mt-0.5"
-                  style={{
-                    color: colors.subtitleColor,
-                    fontFamily: 'var(--font-display)',
-                    fontStyle: 'italic',
-                  }}
-                >
-                  {album.media.length} fotos
-                </span>
+                  <div className="flex flex-col">
+                    <h1
+                      className="text-xl sm:text-2xl font-semibold tracking-wide"
+                      style={{
+                        color: colors.titleColor,
+                        fontFamily: 'var(--font-display)',
+                        textShadow: `0 2px 4px ${colors.titleShadow}`,
+                      }}
+                    >
+                      {album.title}
+                    </h1>
+                    <span
+                      className="text-sm font-medium tracking-wide mt-0.5"
+                      style={{
+                        color: colors.subtitleColor,
+                        fontFamily: 'var(--font-display)',
+                        fontStyle: 'italic',
+                      }}
+                    >
+                      {album.media.length} fotos
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <button
+                    onClick={toggleYearSort}
+                    className="plastic-button flex items-center gap-2 px-4 py-2 cursor-pointer"
+                    style={{
+                      '--btn-hue': colors.buttonHue,
+                      '--btn-sat': `${colors.buttonSat}%`,
+                      '--btn-light': `${colors.buttonLight}%`,
+                    } as React.CSSProperties}
+                    title={yearSortOrder === 'desc' ? 'Ordenar: Más recientes primero' : 'Ordenar: Más antiguos primero'}
+                  >
+                    <Calendar
+                      className="w-4 h-4"
+                      style={{
+                        color: colors.playBtnText,
+                      }}
+                    />
+                    <span
+                      className="hidden sm:inline font-semibold text-sm"
+                      style={{ color: colors.playBtnText }}
+                    >
+                      {yearSortOrder === 'desc' ? 'Recientes' : 'Antiguos'}
+                    </span>
+                  </button>
+
+                  <button
+                    onClick={startSlideshow}
+                    className="plastic-button flex items-center gap-2 px-4 py-2 cursor-pointer"
+                    style={{
+                      '--btn-hue': colors.buttonHue,
+                      '--btn-sat': `${colors.buttonSat}%`,
+                      '--btn-light': `${colors.buttonLight}%`,
+                    } as React.CSSProperties}
+                  >
+                    <Presentation
+                      className="w-4 h-4"
+                      style={{
+                        color: colors.playBtnText,
+                      }}
+                    />
+                    <span
+                      className="hidden sm:inline font-semibold text-sm"
+                      style={{ color: colors.playBtnText }}
+                    >
+                      Presentación
+                    </span>
+                  </button>
+                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={toggleYearSort}
-                className="plastic-button flex items-center gap-2 px-4 py-2 cursor-pointer"
-                style={{
-                  '--btn-hue': colors.buttonHue,
-                  '--btn-sat': `${colors.buttonSat}%`,
-                  '--btn-light': `${colors.buttonLight}%`,
-                } as React.CSSProperties}
-                title={yearSortOrder === 'desc' ? 'Ordenar: Más recientes primero' : 'Ordenar: Más antiguos primero'}
-              >
-                <Calendar
-                  className="w-4 h-4"
-                  style={{
-                    color: colors.playBtnText,
-                  }}
-                />
-                <span
-                  className="hidden sm:inline font-semibold text-sm"
-                  style={{ color: colors.playBtnText }}
-                >
-                  {yearSortOrder === 'desc' ? 'Recientes' : 'Antiguos'}
-                </span>
-              </button>
+            <div
+              className="absolute bottom-0 left-0 right-0 h-4 translate-y-full pointer-events-none"
+              style={{
+                background: 'linear-gradient(to bottom, rgba(0,0,0,0.12), transparent)',
+              }}
+            />
 
-              <button
-                onClick={startSlideshow}
-                className="plastic-button flex items-center gap-2 px-4 py-2 cursor-pointer"
-                style={{
-                  '--btn-hue': colors.buttonHue,
-                  '--btn-sat': `${colors.buttonSat}%`,
-                  '--btn-light': `${colors.buttonLight}%`,
-                } as React.CSSProperties}
-              >
-                <Presentation
-                  className="w-4 h-4"
-                  style={{
-                    color: colors.playBtnText,
-                  }}
-                />
-                <span
-                  className="hidden sm:inline font-semibold text-sm"
-                  style={{ color: colors.playBtnText }}
-                >
-                  Presentación
-                </span>
-              </button>
-            </div>
-          </div>
-        </div>
+            <BindingRings
+              ringColor={colors.ringColor}
+              ringHighlight={colors.ringHighlight}
+              paperColor="#f4ece0"
+            />
+          </motion.header>
 
-        <div
-          className="absolute bottom-0 left-0 right-0 h-4 translate-y-full pointer-events-none"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.12), transparent)',
-          }}
-        />
-
-        <BindingRings
-          ringColor={colors.ringColor}
-          ringHighlight={colors.ringHighlight}
-          paperColor="#f4ece0"
-        />
-      </motion.header>
-
-      <div className="h-8" />
+          <div className="h-8" />
+        </>
+      )}
 
       <main className="min-h-[calc(100vh-120px)] relative z-10">
-        <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-10 sm:py-14">
-          {album.media.length === 0 ? (
-            <div className="text-center text-zinc-500">
-              <p>No hay archivos multimedia en este álbum</p>
-            </div>
-          ) : (
-            <div className="space-y-12 sm:space-y-16">
-              {groupedByYearMonth.map((group, groupIdx) => {
-                let globalIndex = 0
-                // Calcular índice global de este grupo
-                for (let i = 0; i < groupIdx; i++) {
-                  globalIndex += groupedByYearMonth[i].medios.length
-                }
+        {album ? (
+          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-10 sm:py-14">
+            {album.media.length === 0 ? (
+              <div className="text-center text-zinc-500">
+                <p>No hay archivos multimedia en este álbum</p>
+              </div>
+            ) : (
+              <div className="space-y-12 sm:space-y-16">
+                {groupedByYearMonth.map((group, groupIdx) => {
+                  let globalIndex = 0
+                  // Calcular índice global de este grupo
+                  for (let i = 0; i < groupIdx; i++) {
+                    globalIndex += groupedByYearMonth[i].medios.length
+                  }
 
-                return (
-                  <motion.section
-                    key={group.key}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ duration: 0.4, delay: groupIdx * 0.1 }}
-                  >
-                    {/* Encabezado de mes-año o solo separador para sin fecha */}
-                    {group.year !== null && (
-                      <div className="mb-10 relative">
-                        <h2
-                          className="text-2xl sm:text-3xl font-light tracking-wide relative inline-block"
-                          style={{
-                            color: '#5A6270',
-                            fontFamily: "var(--font-handwritten), 'KGTeacherCreatedThinLined', Georgia, serif",
-                            fontWeight: 400,
-                            letterSpacing: '0.02em',
-                            textShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                          }}
-                        >
-                          {group.label}
-                        </h2>
+                  return (
+                    <motion.section
+                      key={group.key}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.4, delay: groupIdx * 0.1 }}
+                    >
+                      {/* Encabezado de mes-año o solo separador para sin fecha */}
+                      {group.year !== null && (
+                        <div className="mb-10 relative">
+                          <h2
+                            className="text-2xl sm:text-3xl font-light tracking-wide relative inline-block"
+                            style={{
+                              color: '#5A6270',
+                              fontFamily: "var(--font-handwritten), 'KGTeacherCreatedThinLined', Georgia, serif",
+                              fontWeight: 400,
+                              letterSpacing: '0.02em',
+                              textShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                            }}
+                          >
+                            {group.label}
+                          </h2>
+                        </div>
+                      )}
+
+                      {/* Separador visual para sin fecha */}
+                      {group.year === null && (
+                        <div className="mb-10 py-6">
+                          <div
+                            className="h-px"
+                            style={{
+                              background: `linear-gradient(90deg, ${colors.subtitleColor}40 0%, ${colors.subtitleColor}20 50%, ${colors.subtitleColor}40 100%)`,
+                            }}
+                          />
+                        </div>
+                      )}
+
+                      {/* Grilla de medios */}
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
+                        {group.medios.map((item, idx) => (
+                          <PolaroidPhoto
+                            key={item.id}
+                            item={item}
+                            index={globalIndex + idx}
+                            onClick={() => openViewer(globalIndex + idx)}
+                          />
+                        ))}
                       </div>
-                    )}
-
-                    {/* Separador visual para sin fecha */}
-                    {group.year === null && (
-                      <div className="mb-10 py-6">
-                        <div
-                          className="h-px"
-                          style={{
-                            background: `linear-gradient(90deg, ${colors.subtitleColor}40 0%, ${colors.subtitleColor}20 50%, ${colors.subtitleColor}40 100%)`,
-                          }}
-                        />
-                      </div>
-                    )}
-
-                    {/* Grilla de medios */}
-                    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-6 sm:gap-8 lg:gap-10">
-                      {group.medios.map((item, idx) => (
-                        <PolaroidPhoto
-                          key={item.id}
-                          item={item}
-                          index={globalIndex + idx}
-                          onClick={() => openViewer(globalIndex + idx)}
-                        />
-                      ))}
-                    </div>
-                  </motion.section>
-                )
-              })}
-            </div>
-          )}
-        </div>
+                    </motion.section>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ) : null}
       </main>
 
       <AnimatePresence>
