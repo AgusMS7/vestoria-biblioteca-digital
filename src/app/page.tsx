@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useMemo } from 'react'
 import { motion } from 'framer-motion'
-import { Header, AlbumCard, TextureFilters, PhysicalAlbumLoader } from '@/components'
+import { Header, AlbumCard, TextureFilters, LoadingOverlay } from '@/components'
 import type { Category, Album } from '@/types'
 
 function WoodShelf({
@@ -164,6 +164,8 @@ export default function LibraryPage() {
   return (
     <div className="min-h-screen" style={{ backgroundColor: 'hsl(25 20% 10%)' }}>
       <TextureFilters />
+      <LoadingOverlay isVisible={loading} />
+
       <Header
         searchQuery={searchQuery}
         setSearchQuery={setSearchQuery}
@@ -190,9 +192,7 @@ export default function LibraryPage() {
           />
 
           <div className="relative z-10 py-4 sm:py-6">
-            {loading ? (
-              <PhysicalAlbumLoader />
-            ) : error ? (
+            {error ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
