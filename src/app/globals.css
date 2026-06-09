@@ -1,9 +1,17 @@
 @import "tailwindcss";
 
+@font-face {
+  font-family: 'KGTeacherCreatedThinLined';
+  src: url('/KGTeacherCreatedThinLined.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+}
+
 @theme inline {
   --font-sans: 'Nunito', system-ui, sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
   --font-display: 'Cormorant Garamond', Georgia, serif;
+  --font-handwritten: 'KGTeacherCreatedThinLined', Georgia, serif;
 }
 
 :root {

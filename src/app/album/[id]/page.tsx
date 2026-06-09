@@ -575,12 +575,13 @@ export default function AlbumPage() {
                     {group.year !== null && (
                       <div className="mb-10 relative">
                         <h2
-                          className="text-3xl sm:text-4xl font-light tracking-wide relative inline-block"
+                          className="text-2xl sm:text-3xl font-light tracking-wide relative inline-block"
                           style={{
-                            color: colors.subtitleColor,
-                            fontFamily: "'Georgia', var(--font-serif)",
-                            fontStyle: 'italic',
-                            textShadow: '0 1px 0 rgba(0,0,0,0.05)',
+                            color: '#5A6270',
+                            fontFamily: "var(--font-handwritten), 'KGTeacherCreatedThinLined', Georgia, serif",
+                            fontWeight: 400,
+                            letterSpacing: '0.02em',
+                            textShadow: '0 1px 2px rgba(0,0,0,0.05)',
                           }}
                         >
                           {group.label}
