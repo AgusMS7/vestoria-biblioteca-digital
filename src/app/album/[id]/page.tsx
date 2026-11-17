@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play, Calendar, ArrowUp, ArrowDown, Presentation } from 'lucide-react'
+import { ArrowLeft, Play, Calendar, Presentation } from 'lucide-react'
 import { FullscreenViewer, TextureFilters, LoadingOverlay } from '@/components'
 import type { Album, Media } from '@/types'
 
@@ -161,7 +161,9 @@ function PolaroidPhoto({
         }}
       >
         <AdhesiveTape style={tapeStyle} />
-        {(tapeStyle as any).dual && <AdhesiveTape style={tapeStyle} isSecond />}
+        {(('dual' in tapeStyle && tapeStyle.dual) ?? false) && (
+          <AdhesiveTape style={tapeStyle} isSecond />
+        )}
 
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
           {isVisible ? (
@@ -271,13 +273,6 @@ export default function AlbumPage() {
   const [yearSortOrder, setYearSortOrder] = useState<YearSortOrder>('desc')
 
   // Agrupar medios por mes-año - DEBE estar antes de los early returns
-  interface MediaGroup {
-    year: number | null
-    month: number | null
-    label: string
-    medios: Media[]
-  }
-
   const groupedByYearMonth = useMemo(() => {
     if (!album) return []
 
@@ -299,7 +294,7 @@ export default function AlbumPage() {
     })
 
     // Convertir a array y ordenar
-    let sorted = Array.from(groups.entries()).map(([key, medios]) => {
+    const sorted = Array.from(groups.entries()).map(([key, medios]) => {
       const { year, month } = groupMetadata.get(key)!
 
       // Generar label

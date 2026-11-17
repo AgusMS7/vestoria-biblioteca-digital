@@ -89,7 +89,7 @@ export async function extractExifDate(buffer: Buffer, mimeType: string): Promise
     }
 
     return null
-  } catch (error) {
+  } catch {
     // EXIF parsing failed, return null
     return null
   }

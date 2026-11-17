@@ -1,3 +1,4 @@
+import type { drive_v3 } from 'googleapis'
 import type { Album } from '@/types/album'
 import { extractYearMonthFromMetadata } from './date-extractor'
 import { getAlbumColor } from './color-palette'
@@ -8,8 +9,7 @@ import type { Category } from '@/types/category'
  * Transforma un archivo de Google Drive en nuestro modelo de Media
  */
 export function mapToMediaItem(
-  driveFile: any,
-  albumId: string
+  driveFile: drive_v3.Schema$File
 ): Media | null {
   const id = driveFile?.id
   const name = driveFile?.name
@@ -30,8 +30,8 @@ export function mapToMediaItem(
   // Extract dimensions from metadata
   let width = imageMediaMetadata?.width || videoMediaMetadata?.width || 1920
   let height = imageMediaMetadata?.height || videoMediaMetadata?.height || 1080
-  let duration = videoMediaMetadata?.durationMillis
-    ? Math.round(videoMediaMetadata.durationMillis / 1000)
+  const duration = videoMediaMetadata?.durationMillis
+    ? Math.round(Number(videoMediaMetadata.durationMillis) / 1000)
     : undefined
 
   // Ensure we have valid dimensions
@@ -39,7 +39,7 @@ export function mapToMediaItem(
   height = Math.max(1, height || 1080)
 
   // Extract year and month using priority order (NEVER use createdTime)
-  const dateInfo = extractYearMonthFromMetadata(name, modifiedTime)
+  const dateInfo = extractYearMonthFromMetadata(name, modifiedTime ?? undefined)
 
   return {
     id,
@@ -61,7 +61,7 @@ export function mapToMediaItem(
  * Transforma una carpeta de Google Drive (álbum) en nuestro modelo de Album
  */
 export function mapToAlbum(
-  driveFolder: any,
+  driveFolder: drive_v3.Schema$File,
   category: string,
   coverImage: string,
   mediaItems: Media[]
@@ -94,7 +94,7 @@ export function mapToAlbum(
  * Transforma una carpeta de Google Drive (categoría) en nuestro modelo de Category
  */
 export function mapToCategory(
-  driveFolder: any,
+  driveFolder: drive_v3.Schema$File,
   albumCount: number
 ): Category | null {
   const id = driveFolder?.id

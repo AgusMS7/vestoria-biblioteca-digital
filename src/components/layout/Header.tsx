@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib'
+import { useSiteName } from './SiteNameContext'
 
 type SortOrder = 'asc' | 'desc'
 
@@ -19,6 +20,8 @@ export function Header({
   sortOrder,
   setSortOrder,
 }: HeaderProps) {
+  const siteName = useSiteName()
+
   const toggleSort = () => {
     setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')
   }
@@ -49,11 +52,11 @@ export function Header({
             >
               <img
                 src="/book-gift-present-svgrepo-com.svg"
-                alt="Biblioteca Rosanna"
+                alt={siteName}
                 className="header-logo-engraved w-8 h-8 sm:w-10 sm:h-10"
               />
               <h1 className="text-3xl sm:text-4xl header-title-engraved tracking-wide">
-                Biblioteca Rosanna
+                {siteName}
               </h1>
             </motion.div>
 

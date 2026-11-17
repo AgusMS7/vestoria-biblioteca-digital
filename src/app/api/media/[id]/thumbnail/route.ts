@@ -1,4 +1,5 @@
 import { getDriveClient } from '@/lib/google-drive'
+import type { Readable } from 'node:stream'
 import sharp from 'sharp'
 
 export const runtime = 'nodejs'
@@ -61,7 +62,7 @@ export async function GET(
 
     // Intentar usar thumbnailLink de Google Drive (para imágenes y videos)
     if (fileMetadata.data.thumbnailLink) {
-      let thumbnailUrl = fileMetadata.data.thumbnailLink
+      const thumbnailUrl = fileMetadata.data.thumbnailLink
 
       // Google Drive devuelve URLs como: https://drive-thumbnail.googleusercontent.com/d/{id}=s
       // Necesitamos reemplazar el parámetro de tamaño =s con el tamaño deseado
@@ -137,7 +138,7 @@ export async function GET(
 
       const streamToBuffer = (): Promise<Response> => {
         return new Promise((resolve) => {
-          const stream = mediaResponse.data as any
+          const stream = mediaResponse.data as Readable
 
           stream.on('data', (chunk: Buffer) => {
             chunks.push(chunk)

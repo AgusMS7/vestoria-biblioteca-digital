@@ -14,8 +14,10 @@ function getEnvVar(key: string): string {
   return value
 }
 
-function getEnvVarOptional(key: string): string | undefined {
-  return process.env[key]
+const DEFAULT_SITE_NAME = 'Biblioteca Rosanna'
+
+function getEnvVarOrDefault(key: string, fallback: string): string {
+  return process.env[key] || fallback
 }
 
 /**
@@ -23,6 +25,28 @@ function getEnvVarOptional(key: string): string | undefined {
  * Se valida lazy solo cuando se accede a estas propiedades
  */
 export const env = {
+  site: {
+    /**
+     * Nombre visible de la marca. Por defecto mantiene el del cliente
+     * para que su deploy quede idéntico sin configurar nada.
+     */
+    get name(): string {
+      return getEnvVarOrDefault('SITE_NAME', DEFAULT_SITE_NAME)
+    },
+  },
+  auth: {
+    /**
+     * Interruptor opcional de Basic Auth. Si alguno falta, no se aplica.
+     * Se leen con acceso estático para que Next las resuelva también en el
+     * runtime Edge del middleware.
+     */
+    get user(): string | undefined {
+      return process.env.SITE_AUTH_USER
+    },
+    get pass(): string | undefined {
+      return process.env.SITE_AUTH_PASS
+    },
+  },
   google: {
     get projectId(): string {
       return getEnvVar('GOOGLE_PROJECT_ID')

@@ -9,7 +9,7 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 ## 📖 Filosofía del Proyecto
 
 - **Google Drive es la fuente única de verdad**: Toda la información se obtiene directamente desde Google Drive. No hay base de datos persistente, sincronización, ni índices locales.
-- **Simplicidad en la arquitectura**: Sin login, sin panel de administración, sin complejidad innecesaria. Solo una interfaz hermosa para tus recuerdos.
+- **Simplicidad en la arquitectura**: Sin panel de administración y con Basic Auth opcional por variables de entorno. Solo una interfaz hermosa para tus recuerdos.
 - **Escalabilidad sin servidor**: Aprovecha la infraestructura de Google Drive para escalar sin límites. Tus fotos se almacenan en Google, tu app en Vercel/Next.js.
 - **Separación clara de capas**: El flujo de datos es lineal: Google Drive → API → Frontend. Cada capa tiene una única responsabilidad.
 
@@ -26,7 +26,7 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 | **Autenticación Drive** | Service Account (JWT) |
 | **SDK Drive** | googleapis (oficial) |
 | **Optimización de Imágenes** | sharp (compresión de thumbnails) |
-| **Extracción de Metadatos** | exifr (lectura de EXIF, años de fotos) |
+| **Extracción de Metadatos** | exifr — endpoint `/api/media/[id]/exif` presente, **no conectado** al flujo de la UI |
 
 ## 📁 Estructura de Carpetas
 
@@ -34,14 +34,13 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 src/
 ├── app/
 │   ├── api/
-│   │   ├── test-drive/          # API de prueba para validar conexión
-│   │   ├── categories/          # APIs de categorías
-│   │   ├── albums/              # APIs de álbumes
-│   │   └── media/               # APIs de multimedia
-│   │       ├── [id]/
-│   │       │   ├── route.ts     # GET /api/media/[id] - Servir media
-│   │       │   └── thumbnail/
-│   │       │       └── route.ts # GET /api/media/[id]/thumbnail
+│   │   ├── categories/route.ts  # GET /api/categories
+│   │   ├── categories/[id]/albums/  # GET /api/categories/[id]/albums
+│   │   ├── albums/[id]/         # GET /api/albums/[id] y /media (este último sin uso)
+│   │   └── media/[id]/
+│   │       ├── route.ts         # GET /api/media/[id] (soporta Range)
+│   │       ├── thumbnail/route.ts  # GET /api/media/[id]/thumbnail
+│   │       └── exif/route.ts    # GET /api/media/[id]/exif (sin uso en la UI)
 │   ├── album/
 │   │   ├── layout.tsx
 │   │   └── [id]/
@@ -52,7 +51,8 @@ src/
 │
 ├── components/                  # Componentes React reutilizables
 │   ├── layout/
-│   │   └── Header.tsx           # Header simplificado (sin search)
+│   │   ├── Header.tsx           # Header con búsqueda y orden
+│   │   └── SiteNameContext.tsx  # Nombre de marca por contexto
 │   ├── library/
 │   │   └── AlbumCard.tsx        # Tarjeta de álbum
 │   ├── ui/
@@ -61,14 +61,8 @@ src/
 │   │   └── FullscreenViewer.tsx # Visor a pantalla completa
 │   └── index.ts                 # Exportaciones centralizadas
 │
-├── features/                    # Funcionalidades futuras (modular)
-│   └── [feature-name]/
-│       ├── hooks/
-│       ├── components/
-│       └── types/
-│
-├── hooks/                       # React Hooks personalizados
-│   └── [hook-name].ts
+├── config/
+│   └── env.ts                   # Único punto de acceso a process.env
 │
 ├── lib/
 │   ├── google-drive/            # Integración con Google Drive
@@ -85,25 +79,20 @@ src/
 │   ├── index.ts
 │   └── utils.ts
 │
-├── services/                    # Servicios generales (futuro)
-│   └── [service-name].ts
-│
 ├── types/                       # Modelos internos tipados
 │   ├── album.ts                 # Modelo Album (basado en Google Drive)
 │   ├── category.ts              # Modelo Category
 │   ├── media.ts                 # Modelo Media (reemplaza MediaItem)
 │   └── index.ts
 │
-└── constants/                   # Constantes globales
-    ├── albums.ts                # [OBSOLETO] A eliminar
-    └── index.ts
+└── proxy.ts                     # Basic Auth opcional (proxy de Next)
 ```
 
 ## 🚀 Instalación y Configuración
 
 ### 1. Prerrequisitos
 
-- Node.js 18+ 
+- Node.js ≥ 20.9
 - npm o yarn
 - Una cuenta de Google Cloud con Drive API habilitada
 - Un Service Account con credenciales JSON
@@ -126,19 +115,22 @@ npm install
 
 #### b. Variables de Entorno
 
-Crea un archivo `.env.local` en la raíz del proyecto:
+Copiá `.env.example` a `.env.local` y completá los valores (el ejemplo lista los nombres, nunca valores reales):
 
-```env
-# Google Drive Configuration
-GOOGLE_CLIENT_EMAIL=tu-email@proyecto.iam.gserviceaccount.com
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\ntu-clave-privada\n-----END PRIVATE KEY-----\n"
-GOOGLE_PROJECT_ID=tu-proyecto-id
-GOOGLE_ROOT_FOLDER_ID=ID_DE_TU_CARPETA_RAIZ_EN_DRIVE
-```
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `GOOGLE_PROJECT_ID` | Sí | ID del proyecto de Google Cloud |
+| `GOOGLE_CLIENT_EMAIL` | Sí | Email del service account |
+| `GOOGLE_PRIVATE_KEY` | Sí | Clave privada del service account |
+| `GOOGLE_ROOT_FOLDER_ID` | Sí | ID de la carpeta raíz en Drive |
+| `SITE_NAME` | No | Nombre visible de la marca. Si falta, usa `Biblioteca Rosanna` |
+| `SITE_AUTH_USER` | No | Usuario de Basic Auth opcional |
+| `SITE_AUTH_PASS` | No | Contraseña de Basic Auth opcional |
 
 **Importante:**
 - La `GOOGLE_PRIVATE_KEY` debe estar entrecomillada y contener `\n` literales para los saltos de línea
 - El `GOOGLE_ROOT_FOLDER_ID` es el ID de la carpeta que contiene todas tus categorías
+- `SITE_AUTH_USER` y `SITE_AUTH_PASS` se activan juntas; si falta una, no se pide login
 
 ### 4. Compartir la Carpeta con el Service Account
 
@@ -200,9 +192,9 @@ La aplicación implementa un sistema completo de servicio de multimedia desde Go
 #### GET /api/media/[id]
 Sirve el archivo multimedia completo (imagen o video) desde Google Drive.
 - **Parámetros**: ID del archivo (en la ruta)
-- **Respuesta**: Stream de contenido (Buffer) con headers de caché
+- **Respuesta**: buffer del archivo completo (o del rango pedido) con headers de caché
 - **Cache**: 1 año (max-age=31536000)
-- **Características**: Streaming real, no redirige (evita problemas de CORS), descarga bajo demanda
+- **Características**: soporte de `Range` (206/416), no redirige (evita problemas de CORS); el cuerpo se arma en memoria, no es streaming real
 
 #### GET /api/media/[id]/thumbnail
 Sirve una miniatura optimizada del archivo.
@@ -245,7 +237,9 @@ interface Media {
   type: 'image' | 'video'      # Tipo de media
   fileName: string              # Nombre original del archivo
   title?: string               # Título (igual a fileName por ahora)
-  date?: string                # Fecha (futuro)
+  date?: string                # Sin uso (el mapper lo devuelve undefined)
+  year?: number                # Año (nombre del archivo o modifiedTime)
+  month?: number               # Mes (nombre del archivo o modifiedTime)
   width: number                # Ancho original
   height: number               # Alto original
   duration?: number            # Duración en segundos (solo videos)
@@ -263,6 +257,8 @@ Implementación optimizada con TTL (Time To Live):
 - **Media**: 30 minutos
 - **Portadas**: 1 hora
 
+**Importante:** esta caché vive en memoria de cada proceso. En Vercel cada instancia tiene su propia memoria, así que no se comparte ni persiste entre instancias y en la práctica acierta poco o nada. No hay índice local ni caché externo.
+
 El caché se invalida automáticamente tras expirar. Para invalidación manual:
 ```typescript
 invalidateCategoryCache(categoryId)
@@ -272,7 +268,7 @@ invalidateAllCache()
 
 ### Optimizaciones Implementadas
 
-✅ Streaming real de archivos desde Google Drive
+✅ Descarga de archivos desde Google Drive con soporte de `Range` (206/416)
 ✅ Thumbnails optimizadas (sharp) con caché en memoria
 ✅ Lazy loading de imágenes en grilla con IntersectionObserver (300px margin)
 ✅ Precargas de media en visor para navegación fluida
@@ -280,17 +276,18 @@ invalidateAllCache()
 ✅ Headers de caché agresivos (1 año, immutable)
 ✅ CORS habilitado para servir desde cualquier origen
 ✅ Ordenamiento alphabético en biblioteca y cronológico en álbumes
-✅ Agrupación automática por año dentro de álbumes
+✅ Agrupación automática por mes-año dentro de álbumes
 
 ## 📅 Organización Cronológica en Álbumes
 
-Cada álbum agrupa automáticamente las fotografías y vídeos por año, utilizando esta prioridad:
+Cada álbum agrupa automáticamente las fotografías y vídeos por mes-año. El flujo real usa esta prioridad:
 
-1. **EXIF DateTimeOriginal** (para imágenes con metadatos originales)
-2. **Metadata de grabación** (para vídeos)
-3. **Patrón en nombre de archivo** (ej: IMG_20190523.jpg, Vacaciones_2020.jpg)
-4. **createdTime de Google Drive**
-5. **modifiedTime de Google Drive**
+1. **Patrón en el nombre del archivo** (ej: IMG_20190523.jpg, Vacaciones_2020.jpg)
+2. **`modifiedTime` de Google Drive** como fallback
+
+**Importante:**
+- **EXIF no participa del flujo principal**: existe el endpoint `/api/media/[id]/exif` y el extractor, pero ningún componente de la UI lo llama todavía.
+- `createdTime` de Google Drive se evita a propósito.
 
 **Comportamiento especial:**
 - Los medios sin año conocido se agrupan al final de forma discreta
@@ -310,7 +307,7 @@ La aplicación estará disponible en `http://localhost:3000`
 
 ### Probar la conexión a Google Drive
 
-Visita `http://localhost:3000/api/test-drive` para validar que la autenticación es correcta. Deberías ver una respuesta JSON con el contenido de tu carpeta raíz.
+Abrí `http://localhost:3000`: si la carpeta raíz está compartida con el service account, se listan las categorías. Los errores de conexión aparecen en la consola del servidor.
 
 ### Compilar para producción
 
@@ -338,7 +335,7 @@ vercel
 
 Asegúrate de que el hosting soporta:
 - Next.js 16+
-- Node.js 18+
+- Node.js ≥ 20.9
 - Variables de entorno
 
 ## 📊 Flujo de Datos
@@ -403,10 +400,12 @@ Asegúrate de que el hosting soporta:
 
 ## 🔐 Seguridad
 
-- **No hay acceso público**: Solo el Service Account autenticado accede a Google Drive
+- **Acceso a Drive restringido**: solo el Service Account autenticado (lectura) accede a Google Drive. El sitio en sí no pide login: quien tenga la URL ve el catálogo
 - **No hay credenciales en frontend**: Las credenciales están solo en variables de entorno del servidor
 - **Lectura solo**: El Service Account solo tiene permisos de lectura (`drive.readonly`)
 - **CORS habilitado**: Las API Routes pueden ser consumidas desde el frontend
+- **Basic Auth opcional**: si se definen `SITE_AUTH_USER` y `SITE_AUTH_PASS`, el sitio pide login; sin ellas queda abierto como antes
+- **No indexación**: todas las respuestas llevan `X-Robots-Tag: noindex, nofollow`; `robots.txt` permite el rastreo para que Google pueda leer el header
 
 ## 📈 Arquitectura y Decisiones
 
@@ -427,7 +426,7 @@ Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI
 
 ## 📝 Licencia
 
-Privado - Agustín Sandoval
+[MIT](./LICENSE) © 2026 Agustín Matías Sandoval
 
 ## 👨‍💻 Desarrollo Continuo
 
@@ -435,5 +434,5 @@ Este proyecto está en desarrollo activo. Para cambios no previstos o decisiones
 
 ---
 
-**Última actualización**: Junio 2026  
+**Última actualización**: Noviembre 2026  
 **Versión**: 0.1.0

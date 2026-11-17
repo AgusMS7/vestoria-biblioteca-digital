@@ -1,8 +1,10 @@
 import type { Metadata, Viewport } from "next";
+import { env } from "@/config/env";
+import { SiteNameProvider } from "@/components/layout/SiteNameContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Biblioteca Rosanna — Álbumes Familiares",
+  title: `${env.site.name} — Álbumes Familiares`,
   description: "Una biblioteca de álbumes de fotos familiares con estética vintage de madera",
   icons: {
     icon: '/book-gift-present-svgrepo-com.svg',
@@ -30,7 +32,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="bg-background">{children}</body>
+      <body className="bg-background">
+        <SiteNameProvider name={env.site.name}>{children}</SiteNameProvider>
+      </body>
     </html>
   );
 }

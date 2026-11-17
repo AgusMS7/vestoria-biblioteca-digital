@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import lottie from 'lottie-web'
+import lottie, { type AnimationItem } from 'lottie-web'
 
 interface LoadingOverlayProps {
   isVisible: boolean
@@ -11,7 +11,7 @@ interface LoadingOverlayProps {
 
 export function LoadingOverlay({ isVisible, animationData = '/book-loading.json' }: LoadingOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null)
-  const animationRef = useRef<any>(null)
+  const animationRef = useRef<AnimationItem | null>(null)
 
   useEffect(() => {
     if (!isVisible || !containerRef.current) return
