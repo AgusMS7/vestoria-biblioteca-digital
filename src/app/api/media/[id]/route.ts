@@ -1,4 +1,5 @@
 import { getDriveClient } from '@/lib/google-drive'
+import type { Readable } from 'node:stream'
 
 export const runtime = 'nodejs'
 
@@ -45,7 +46,7 @@ function parseRangeHeader(rangeHeader: string, totalSize: number) {
   }
 }
 
-function streamToBuffer(stream: any): Promise<Buffer> {
+function streamToBuffer(stream: Readable): Promise<Buffer> {
   const chunks: Buffer[] = []
 
   return new Promise((resolve, reject) => {
@@ -141,7 +142,7 @@ export async function GET(
       mediaRequestOptions
     )
 
-    const buffer = await streamToBuffer(mediaResponse.data as any)
+    const buffer = await streamToBuffer(mediaResponse.data as Readable)
 
     if (!responseHeaders['Content-Length']) {
       responseHeaders['Content-Length'] = String(buffer.length)

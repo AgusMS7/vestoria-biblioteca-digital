@@ -1,4 +1,5 @@
 import { getDriveClient } from './client'
+import type { drive_v3 } from 'googleapis'
 import {
   mapToAlbum,
   mapToCategory,
@@ -156,7 +157,7 @@ export async function getAlbum(albumId: string): Promise<Album | null> {
 async function getAlbumDetails(
   albumId: string,
   category: string,
-  folderData: any
+  folderData: drive_v3.Schema$File
 ): Promise<Album | null> {
   try {
     const drive = getDriveClient()

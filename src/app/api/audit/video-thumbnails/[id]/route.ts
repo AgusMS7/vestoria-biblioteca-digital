@@ -1,4 +1,5 @@
 import { getDriveClient } from '@/lib/google-drive'
+import type { drive_v3 } from 'googleapis'
 
 export const runtime = 'nodejs'
 
@@ -6,7 +7,7 @@ interface VideoAudit {
   fileId: string
   filename: string
   mimeType: string
-  videoMediaMetadata: any
+  videoMediaMetadata: drive_v3.Schema$File['videoMediaMetadata']
   hasThumbnailLink: boolean
   thumbnailLink: string | null
   canGenerateThumbnail: boolean

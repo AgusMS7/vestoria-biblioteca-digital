@@ -1,5 +1,6 @@
 import { getDriveClient } from '@/lib/google-drive'
 import { getExifDateCached } from '@/lib/google-drive/exif-extractor'
+import type { Readable } from 'node:stream'
 
 export const runtime = 'nodejs'
 
@@ -82,7 +83,7 @@ export async function GET(
 
     // Convertir stream a buffer
     const chunks: Buffer[] = []
-    const stream = mediaResponse.data as any
+    const stream = mediaResponse.data as Readable
 
     return new Promise((resolve) => {
       stream.on('data', (chunk: Buffer) => {

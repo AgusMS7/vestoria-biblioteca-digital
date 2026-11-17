@@ -161,7 +161,9 @@ function PolaroidPhoto({
         }}
       >
         <AdhesiveTape style={tapeStyle} />
-        {(tapeStyle as any).dual && <AdhesiveTape style={tapeStyle} isSecond />}
+        {(('dual' in tapeStyle && tapeStyle.dual) ?? false) && (
+          <AdhesiveTape style={tapeStyle} isSecond />
+        )}
 
         <div className="relative aspect-square overflow-hidden bg-gradient-to-br from-gray-200 to-gray-300">
           {isVisible ? (
@@ -299,7 +301,7 @@ export default function AlbumPage() {
     })
 
     // Convertir a array y ordenar
-    let sorted = Array.from(groups.entries()).map(([key, medios]) => {
+    const sorted = Array.from(groups.entries()).map(([key, medios]) => {
       const { year, month } = groupMetadata.get(key)!
 
       // Generar label
