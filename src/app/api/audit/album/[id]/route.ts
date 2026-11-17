@@ -1,5 +1,4 @@
 import { getDriveClient } from '@/lib/google-drive'
-import { isMediaFile } from '@/lib/google-drive/mapper'
 
 export const runtime = 'nodejs'
 
@@ -113,7 +112,6 @@ export async function GET(
       const mimeType = file.mimeType || 'unknown'
       const filename = file.name || 'unknown'
       const isImage = mimeType.startsWith('image/')
-      const isVideo = mimeType.startsWith('video/')
 
       const dateAnalysis = analyzeFileName(filename)
 
@@ -124,13 +122,13 @@ export async function GET(
       if (file.modifiedTime) {
         try {
           modifiedYear = new Date(file.modifiedTime).getFullYear()
-        } catch (e) {}
+        } catch {}
       }
 
       if (file.createdTime) {
         try {
           createdYear = new Date(file.createdTime).getFullYear()
-        } catch (e) {}
+        } catch {}
       }
 
       return {

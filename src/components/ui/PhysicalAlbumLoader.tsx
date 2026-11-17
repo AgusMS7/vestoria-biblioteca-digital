@@ -1,7 +1,6 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import styles from './PhysicalAlbumLoader.module.css'
 
 export function PhysicalAlbumLoader() {
   const pageVariants = {

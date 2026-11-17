@@ -195,7 +195,7 @@ async function getAlbumDetails(
 
     // Mapear archivos multimedia
     const media = mediaFiles
-      .map((file) => mapToMediaItem(file, albumId))
+      .map((file) => mapToMediaItem(file))
       .filter((m): m is Media => m !== null)
 
     // Mapear álbum
@@ -230,7 +230,7 @@ export async function getMedia(albumId: string): Promise<Media[]> {
     const media = (response.data.files || [])
       .filter((f) => !isCoverFile(f.name || '')) // Excluir portadas
       .filter((f) => isMediaFile(f.mimeType || ''))
-      .map((file) => mapToMediaItem(file, albumId))
+      .map((file) => mapToMediaItem(file))
       .filter((m): m is Media => m !== null)
 
     // Cachear por 30 minutos (180000 ms)
@@ -279,7 +279,7 @@ export async function getAlbumCover(albumId: string): Promise<Media | null> {
       return null
     }
 
-    const cover = mapToMediaItem(coverFile, albumId)
+    const cover = mapToMediaItem(coverFile)
     if (cover) {
       coverCache.set(cacheKey, cover, 3600000)
     }

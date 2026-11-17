@@ -4,18 +4,6 @@ import type { Readable } from 'node:stream'
 
 export const runtime = 'nodejs'
 
-interface ExifResponse {
-  fileId: string
-  filename: string
-  exifFound: boolean
-  year?: number
-  month?: number
-  day?: number
-  source?: string
-  confidence?: string
-  note?: string
-}
-
 /**
  * GET /api/media/[id]/exif
  * 

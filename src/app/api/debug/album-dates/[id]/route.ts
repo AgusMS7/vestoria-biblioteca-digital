@@ -1,5 +1,5 @@
 import { getDriveClient } from '@/lib/google-drive'
-import { mapToMediaItem, isMediaFile, isCoverFile } from '@/lib/google-drive/mapper'
+import { isMediaFile, isCoverFile } from '@/lib/google-drive/mapper'
 import { extractYearMonthFromMetadata } from '@/lib/google-drive/date-extractor'
 
 export const runtime = 'nodejs'
@@ -44,7 +44,7 @@ export async function GET(
             month: d.getMonth() + 1,
             date: d.toISOString().split('T')[0],
           }
-        } catch (e) {
+        } catch {
           modifiedDate = { error: 'invalid date' }
         }
       }

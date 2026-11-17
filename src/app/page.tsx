@@ -108,25 +108,6 @@ export default function LibraryPage() {
     loadData()
   }, [])
 
-  const filteredCategories = useMemo(() => {
-    return categories.filter((cat) => {
-      const matchesSearch = cat.name
-        .toLowerCase()
-        .includes(searchQuery.toLowerCase())
-      return matchesSearch
-    })
-  }, [categories, searchQuery])
-
-  const filteredAlbums = useMemo(() => {
-    const albums = Object.values(categoryAlbums).flat()
-    return albums.filter((album) => {
-      const matchesSearch =
-        album.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        album.category.toLowerCase().includes(searchQuery.toLowerCase())
-      return matchesSearch
-    })
-  }, [categoryAlbums, searchQuery])
-
   const groupedAlbums = useMemo(() => {
     return categories
       .filter((cat) => categoryAlbums[cat.name])

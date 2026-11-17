@@ -46,7 +46,7 @@ export async function extractYearFromMedia(
           }
         }
       }
-    } catch (error) {
+    } catch {
       // EXIF no disponible o error al parsear
     }
   }
@@ -71,7 +71,7 @@ export async function extractYearFromMedia(
           return year
         }
       }
-    } catch (error) {
+    } catch {
       // Ignorar error
     }
   }
@@ -106,7 +106,7 @@ export function extractYearFromMetadata(
       if (isValidYear(year)) {
         return year
       }
-    } catch (error) {
+    } catch {
       // Ignorar
     }
   }
@@ -185,7 +185,7 @@ export function extractYearMonthFromMetadata(
           return { year, month }
         }
       }
-    } catch (error) {
+    } catch {
       // Ignorar
     }
   }

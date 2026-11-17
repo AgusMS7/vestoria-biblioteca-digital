@@ -9,8 +9,7 @@ import type { Category } from '@/types/category'
  * Transforma un archivo de Google Drive en nuestro modelo de Media
  */
 export function mapToMediaItem(
-  driveFile: drive_v3.Schema$File,
-  albumId: string
+  driveFile: drive_v3.Schema$File
 ): Media | null {
   const id = driveFile?.id
   const name = driveFile?.name

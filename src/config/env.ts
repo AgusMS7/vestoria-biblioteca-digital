@@ -14,10 +14,6 @@ function getEnvVar(key: string): string {
   return value
 }
 
-function getEnvVarOptional(key: string): string | undefined {
-  return process.env[key]
-}
-
 /**
  * Configuración de Google Drive
  * Se valida lazy solo cuando se accede a estas propiedades

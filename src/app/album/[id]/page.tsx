@@ -3,7 +3,7 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play, Calendar, ArrowUp, ArrowDown, Presentation } from 'lucide-react'
+import { ArrowLeft, Play, Calendar, Presentation } from 'lucide-react'
 import { FullscreenViewer, TextureFilters, LoadingOverlay } from '@/components'
 import type { Album, Media } from '@/types'
 
@@ -273,13 +273,6 @@ export default function AlbumPage() {
   const [yearSortOrder, setYearSortOrder] = useState<YearSortOrder>('desc')
 
   // Agrupar medios por mes-año - DEBE estar antes de los early returns
-  interface MediaGroup {
-    year: number | null
-    month: number | null
-    label: string
-    medios: Media[]
-  }
-
   const groupedByYearMonth = useMemo(() => {
     if (!album) return []
 
