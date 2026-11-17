@@ -6,7 +6,7 @@ import { env } from '@/config/env'
  * Basic Auth opcional. Solo interviene si SITE_AUTH_USER y SITE_AUTH_PASS
  * están definidas; sin ellas deja pasar todo sin tocar la request.
  */
-export function middleware(request: NextRequest) {
+export function proxy(request: NextRequest) {
   const user = env.auth.user
   const pass = env.auth.pass
 
