@@ -34,13 +34,13 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 src/
 ├── app/
 │   ├── api/
-│   │   ├── categories/          # APIs de categorías
-│   │   ├── albums/              # APIs de álbumes
-│   │   └── media/               # APIs de multimedia
-│   │       ├── [id]/
-│   │       │   ├── route.ts     # GET /api/media/[id] - Servir media
-│   │       │   └── thumbnail/
-│   │       │       └── route.ts # GET /api/media/[id]/thumbnail
+│   │   ├── categories/route.ts  # GET /api/categories
+│   │   ├── categories/[id]/albums/  # GET /api/categories/[id]/albums
+│   │   ├── albums/[id]/         # GET /api/albums/[id] y /media (este último sin uso)
+│   │   └── media/[id]/
+│   │       ├── route.ts         # GET /api/media/[id] (soporta Range)
+│   │       ├── thumbnail/route.ts  # GET /api/media/[id]/thumbnail
+│   │       └── exif/route.ts    # GET /api/media/[id]/exif (sin uso en la UI)
 │   ├── album/
 │   │   ├── layout.tsx
 │   │   └── [id]/
@@ -51,7 +51,8 @@ src/
 │
 ├── components/                  # Componentes React reutilizables
 │   ├── layout/
-│   │   └── Header.tsx           # Header simplificado (sin search)
+│   │   ├── Header.tsx           # Header con búsqueda y orden
+│   │   └── SiteNameContext.tsx  # Nombre de marca por contexto
 │   ├── library/
 │   │   └── AlbumCard.tsx        # Tarjeta de álbum
 │   ├── ui/
@@ -60,14 +61,8 @@ src/
 │   │   └── FullscreenViewer.tsx # Visor a pantalla completa
 │   └── index.ts                 # Exportaciones centralizadas
 │
-├── features/                    # Funcionalidades futuras (modular)
-│   └── [feature-name]/
-│       ├── hooks/
-│       ├── components/
-│       └── types/
-│
-├── hooks/                       # React Hooks personalizados
-│   └── [hook-name].ts
+├── config/
+│   └── env.ts                   # Único punto de acceso a process.env
 │
 ├── lib/
 │   ├── google-drive/            # Integración con Google Drive
@@ -84,18 +79,13 @@ src/
 │   ├── index.ts
 │   └── utils.ts
 │
-├── services/                    # Servicios generales (futuro)
-│   └── [service-name].ts
-│
 ├── types/                       # Modelos internos tipados
 │   ├── album.ts                 # Modelo Album (basado en Google Drive)
 │   ├── category.ts              # Modelo Category
 │   ├── media.ts                 # Modelo Media (reemplaza MediaItem)
 │   └── index.ts
 │
-└── constants/                   # Constantes globales
-    ├── albums.ts                # [OBSOLETO] A eliminar
-    └── index.ts
+└── proxy.ts                     # Basic Auth opcional (proxy de Next)
 ```
 
 ## 🚀 Instalación y Configuración
@@ -202,9 +192,9 @@ La aplicación implementa un sistema completo de servicio de multimedia desde Go
 #### GET /api/media/[id]
 Sirve el archivo multimedia completo (imagen o video) desde Google Drive.
 - **Parámetros**: ID del archivo (en la ruta)
-- **Respuesta**: Stream de contenido (Buffer) con headers de caché
+- **Respuesta**: buffer del archivo completo (o del rango pedido) con headers de caché
 - **Cache**: 1 año (max-age=31536000)
-- **Características**: Streaming real, no redirige (evita problemas de CORS), descarga bajo demanda
+- **Características**: soporte de `Range` (206/416), no redirige (evita problemas de CORS); el cuerpo se arma en memoria, no es streaming real
 
 #### GET /api/media/[id]/thumbnail
 Sirve una miniatura optimizada del archivo.
@@ -247,7 +237,9 @@ interface Media {
   type: 'image' | 'video'      # Tipo de media
   fileName: string              # Nombre original del archivo
   title?: string               # Título (igual a fileName por ahora)
-  date?: string                # Fecha (futuro)
+  date?: string                # Sin uso (el mapper lo devuelve undefined)
+  year?: number                # Año (nombre del archivo o modifiedTime)
+  month?: number               # Mes (nombre del archivo o modifiedTime)
   width: number                # Ancho original
   height: number               # Alto original
   duration?: number            # Duración en segundos (solo videos)
@@ -276,7 +268,7 @@ invalidateAllCache()
 
 ### Optimizaciones Implementadas
 
-✅ Streaming real de archivos desde Google Drive
+✅ Descarga de archivos desde Google Drive con soporte de `Range` (206/416)
 ✅ Thumbnails optimizadas (sharp) con caché en memoria
 ✅ Lazy loading de imágenes en grilla con IntersectionObserver (300px margin)
 ✅ Precargas de media en visor para navegación fluida
@@ -284,7 +276,7 @@ invalidateAllCache()
 ✅ Headers de caché agresivos (1 año, immutable)
 ✅ CORS habilitado para servir desde cualquier origen
 ✅ Ordenamiento alphabético en biblioteca y cronológico en álbumes
-✅ Agrupación automática por año dentro de álbumes
+✅ Agrupación automática por mes-año dentro de álbumes
 
 ## 📅 Organización Cronológica en Álbumes
 
@@ -408,7 +400,7 @@ Asegúrate de que el hosting soporta:
 
 ## 🔐 Seguridad
 
-- **No hay acceso público**: Solo el Service Account autenticado accede a Google Drive
+- **Acceso a Drive restringido**: solo el Service Account autenticado (lectura) accede a Google Drive. El sitio en sí no pide login: quien tenga la URL ve el catálogo
 - **No hay credenciales en frontend**: Las credenciales están solo en variables de entorno del servidor
 - **Lectura solo**: El Service Account solo tiene permisos de lectura (`drive.readonly`)
 - **CORS habilitado**: Las API Routes pueden ser consumidas desde el frontend
@@ -442,5 +434,5 @@ Este proyecto está en desarrollo activo. Para cambios no previstos o decisiones
 
 ---
 
-**Última actualización**: Junio 2026  
+**Última actualización**: Noviembre 2026  
 **Versión**: 0.1.0
