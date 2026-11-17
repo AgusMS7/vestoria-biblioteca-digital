@@ -9,7 +9,7 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 ## 📖 Filosofía del Proyecto
 
 - **Google Drive es la fuente única de verdad**: Toda la información se obtiene directamente desde Google Drive. No hay base de datos persistente, sincronización, ni índices locales.
-- **Simplicidad en la arquitectura**: Sin login, sin panel de administración, sin complejidad innecesaria. Solo una interfaz hermosa para tus recuerdos.
+- **Simplicidad en la arquitectura**: Sin panel de administración y con Basic Auth opcional por variables de entorno. Solo una interfaz hermosa para tus recuerdos.
 - **Escalabilidad sin servidor**: Aprovecha la infraestructura de Google Drive para escalar sin límites. Tus fotos se almacenan en Google, tu app en Vercel/Next.js.
 - **Separación clara de capas**: El flujo de datos es lineal: Google Drive → API → Frontend. Cada capa tiene una única responsabilidad.
 
@@ -26,7 +26,7 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 | **Autenticación Drive** | Service Account (JWT) |
 | **SDK Drive** | googleapis (oficial) |
 | **Optimización de Imágenes** | sharp (compresión de thumbnails) |
-| **Extracción de Metadatos** | exifr (lectura de EXIF, años de fotos) |
+| **Extracción de Metadatos** | exifr — endpoint `/api/media/[id]/exif` presente, **no conectado** al flujo de la UI |
 
 ## 📁 Estructura de Carpetas
 
@@ -34,7 +34,6 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 src/
 ├── app/
 │   ├── api/
-│   │   ├── test-drive/          # API de prueba para validar conexión
 │   │   ├── categories/          # APIs de categorías
 │   │   ├── albums/              # APIs de álbumes
 │   │   └── media/               # APIs de multimedia
@@ -103,7 +102,7 @@ src/
 
 ### 1. Prerrequisitos
 
-- Node.js 18+ 
+- Node.js ≥ 20.9
 - npm o yarn
 - Una cuenta de Google Cloud con Drive API habilitada
 - Un Service Account con credenciales JSON
@@ -126,19 +125,22 @@ npm install
 
 #### b. Variables de Entorno
 
-Crea un archivo `.env.local` en la raíz del proyecto:
+Copiá `.env.example` a `.env.local` y completá los valores (el ejemplo lista los nombres, nunca valores reales):
 
-```env
-# Google Drive Configuration
-GOOGLE_CLIENT_EMAIL=tu-email@proyecto.iam.gserviceaccount.com
-GOOGLE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\ntu-clave-privada\n-----END PRIVATE KEY-----\n"
-GOOGLE_PROJECT_ID=tu-proyecto-id
-GOOGLE_ROOT_FOLDER_ID=ID_DE_TU_CARPETA_RAIZ_EN_DRIVE
-```
+| Variable | Obligatoria | Descripción |
+|---|---|---|
+| `GOOGLE_PROJECT_ID` | Sí | ID del proyecto de Google Cloud |
+| `GOOGLE_CLIENT_EMAIL` | Sí | Email del service account |
+| `GOOGLE_PRIVATE_KEY` | Sí | Clave privada del service account |
+| `GOOGLE_ROOT_FOLDER_ID` | Sí | ID de la carpeta raíz en Drive |
+| `SITE_NAME` | No | Nombre visible de la marca. Si falta, usa `Biblioteca Rosanna` |
+| `SITE_AUTH_USER` | No | Usuario de Basic Auth opcional |
+| `SITE_AUTH_PASS` | No | Contraseña de Basic Auth opcional |
 
 **Importante:**
 - La `GOOGLE_PRIVATE_KEY` debe estar entrecomillada y contener `\n` literales para los saltos de línea
 - El `GOOGLE_ROOT_FOLDER_ID` es el ID de la carpeta que contiene todas tus categorías
+- `SITE_AUTH_USER` y `SITE_AUTH_PASS` se activan juntas; si falta una, no se pide login
 
 ### 4. Compartir la Carpeta con el Service Account
 
@@ -263,6 +265,8 @@ Implementación optimizada con TTL (Time To Live):
 - **Media**: 30 minutos
 - **Portadas**: 1 hora
 
+**Importante:** esta caché vive en memoria de cada proceso. En Vercel cada instancia tiene su propia memoria, así que no se comparte ni persiste entre instancias y en la práctica acierta poco o nada. No hay índice local ni caché externo.
+
 El caché se invalida automáticamente tras expirar. Para invalidación manual:
 ```typescript
 invalidateCategoryCache(categoryId)
@@ -284,13 +288,14 @@ invalidateAllCache()
 
 ## 📅 Organización Cronológica en Álbumes
 
-Cada álbum agrupa automáticamente las fotografías y vídeos por año, utilizando esta prioridad:
+Cada álbum agrupa automáticamente las fotografías y vídeos por mes-año. El flujo real usa esta prioridad:
 
-1. **EXIF DateTimeOriginal** (para imágenes con metadatos originales)
-2. **Metadata de grabación** (para vídeos)
-3. **Patrón en nombre de archivo** (ej: IMG_20190523.jpg, Vacaciones_2020.jpg)
-4. **createdTime de Google Drive**
-5. **modifiedTime de Google Drive**
+1. **Patrón en el nombre del archivo** (ej: IMG_20190523.jpg, Vacaciones_2020.jpg)
+2. **`modifiedTime` de Google Drive** como fallback
+
+**Importante:**
+- **EXIF no participa del flujo principal**: existe el endpoint `/api/media/[id]/exif` y el extractor, pero ningún componente de la UI lo llama todavía.
+- `createdTime` de Google Drive se evita a propósito.
 
 **Comportamiento especial:**
 - Los medios sin año conocido se agrupan al final de forma discreta
@@ -310,7 +315,7 @@ La aplicación estará disponible en `http://localhost:3000`
 
 ### Probar la conexión a Google Drive
 
-Visita `http://localhost:3000/api/test-drive` para validar que la autenticación es correcta. Deberías ver una respuesta JSON con el contenido de tu carpeta raíz.
+Abrí `http://localhost:3000`: si la carpeta raíz está compartida con el service account, se listan las categorías. Los errores de conexión aparecen en la consola del servidor.
 
 ### Compilar para producción
 
@@ -338,7 +343,7 @@ vercel
 
 Asegúrate de que el hosting soporta:
 - Next.js 16+
-- Node.js 18+
+- Node.js ≥ 20.9
 - Variables de entorno
 
 ## 📊 Flujo de Datos
@@ -407,6 +412,8 @@ Asegúrate de que el hosting soporta:
 - **No hay credenciales en frontend**: Las credenciales están solo en variables de entorno del servidor
 - **Lectura solo**: El Service Account solo tiene permisos de lectura (`drive.readonly`)
 - **CORS habilitado**: Las API Routes pueden ser consumidas desde el frontend
+- **Basic Auth opcional**: si se definen `SITE_AUTH_USER` y `SITE_AUTH_PASS`, el sitio pide login; sin ellas queda abierto como antes
+- **No indexación**: todas las respuestas llevan `X-Robots-Tag: noindex, nofollow`; `robots.txt` permite el rastreo para que Google pueda leer el header
 
 ## 📈 Arquitectura y Decisiones
 
@@ -427,7 +434,7 @@ Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI
 
 ## 📝 Licencia
 
-Privado - Agustín Sandoval
+[MIT](./LICENSE) © 2026 Agustín Matías Sandoval
 
 ## 👨‍💻 Desarrollo Continuo
 
