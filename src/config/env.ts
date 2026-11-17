@@ -34,6 +34,19 @@ export const env = {
       return getEnvVarOrDefault('SITE_NAME', DEFAULT_SITE_NAME)
     },
   },
+  auth: {
+    /**
+     * Interruptor opcional de Basic Auth. Si alguno falta, no se aplica.
+     * Se leen con acceso estático para que Next las resuelva también en el
+     * runtime Edge del middleware.
+     */
+    get user(): string | undefined {
+      return process.env.SITE_AUTH_USER
+    },
+    get pass(): string | undefined {
+      return process.env.SITE_AUTH_PASS
+    },
+  },
   google: {
     get projectId(): string {
       return getEnvVar('GOOGLE_PROJECT_ID')
