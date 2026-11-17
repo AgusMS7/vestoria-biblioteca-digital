@@ -14,11 +14,26 @@ function getEnvVar(key: string): string {
   return value
 }
 
+const DEFAULT_SITE_NAME = 'Biblioteca Rosanna'
+
+function getEnvVarOrDefault(key: string, fallback: string): string {
+  return process.env[key] || fallback
+}
+
 /**
  * Configuración de Google Drive
  * Se valida lazy solo cuando se accede a estas propiedades
  */
 export const env = {
+  site: {
+    /**
+     * Nombre visible de la marca. Por defecto mantiene el del cliente
+     * para que su deploy quede idéntico sin configurar nada.
+     */
+    get name(): string {
+      return getEnvVarOrDefault('SITE_NAME', DEFAULT_SITE_NAME)
+    },
+  },
   google: {
     get projectId(): string {
       return getEnvVar('GOOGLE_PROJECT_ID')
