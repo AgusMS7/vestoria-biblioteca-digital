@@ -1,4 +1,4 @@
-import { getDriveClient } from '@/lib/google-drive'
+import { getDriveClient, isValidDriveId } from '@/lib/google-drive'
 import type { Readable } from 'node:stream'
 import sharp from 'sharp'
 
@@ -26,6 +26,10 @@ export async function GET(
     return new Response('File ID is required', { status: 400 })
   }
 
+  if (!isValidDriveId(fileId)) {
+    return new Response('Invalid file ID', { status: 400 })
+  }
+
   // Generar clave de caché única por tipo de archivo
   const cacheKey = `${fileId}_${size}`
 
@@ -38,7 +42,6 @@ export async function GET(
         'Content-Type': 'image/jpeg',
         'Content-Length': buffer.length.toString(),
         'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-        'Access-Control-Allow-Origin': '*',
       },
     })
   }
@@ -99,8 +102,7 @@ export async function GET(
             headers: {
               'Content-Type': 'image/jpeg',
               'Content-Length': buffer.length.toString(),
-              'Cache-Control': 'public, max-age=31536000, immutable',
-              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
             },
           })
         } else {
@@ -121,8 +123,7 @@ export async function GET(
       return new Response(null, {
         status: 204,
         headers: {
-          'Cache-Control': 'public, max-age=86400',
-          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
         },
       })
     }
@@ -179,8 +180,7 @@ export async function GET(
                   headers: {
                     'Content-Type': 'image/jpeg',
                     'Content-Length': compressedBuffer.length.toString(),
-                    'Cache-Control': 'public, max-age=31536000, immutable',
-                    'Access-Control-Allow-Origin': '*',
+                    'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
                   },
                 })
               )
@@ -194,8 +194,7 @@ export async function GET(
                   headers: {
                     'Content-Type': mimeType,
                     'Content-Length': fallbackBuffer.length.toString(),
-                    'Cache-Control': 'public, max-age=31536000, immutable',
-                    'Access-Control-Allow-Origin': '*',
+                    'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
                   },
                 })
               )
@@ -218,8 +217,8 @@ export async function GET(
 
     return new Response(
       JSON.stringify({
+        success: false,
         error: 'Failed to serve thumbnail',
-        details: error instanceof Error ? error.message : 'Unknown error',
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )

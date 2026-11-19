@@ -353,7 +353,21 @@ export default function AlbumPage() {
 
         const response = await fetch(`/api/albums/${id}`)
         if (!response.ok) {
-          throw new Error('Album not found')
+          const payload = (await response.json().catch(() => null)) as
+            | { code?: string }
+            | null
+
+          if (payload?.code === 'CONFIG_MISSING') {
+            throw new Error('Error al conectar con la biblioteca')
+          }
+
+          if (response.status === 404) {
+            throw new Error('Álbum no encontrado')
+          }
+
+          throw new Error(
+            'No se pudo cargar el álbum. Intentá de nuevo en unos minutos.'
+          )
         }
 
         const data = await response.json()

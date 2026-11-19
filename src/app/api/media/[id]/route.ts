@@ -1,4 +1,4 @@
-import { getDriveClient } from '@/lib/google-drive'
+import { getDriveClient, isValidDriveId } from '@/lib/google-drive'
 import type { Readable } from 'node:stream'
 
 export const runtime = 'nodejs'
@@ -80,6 +80,10 @@ export async function GET(
     return new Response('File ID is required', { status: 400 })
   }
 
+  if (!isValidDriveId(fileId)) {
+    return new Response('Invalid file ID', { status: 400 })
+  }
+
   try {
     const drive = getDriveClient()
 
@@ -94,6 +98,11 @@ export async function GET(
     }
 
     const mimeType = fileMetadata.data.mimeType || 'application/octet-stream'
+
+    if (!mimeType.startsWith('image/') && !mimeType.startsWith('video/')) {
+      return new Response('Unsupported media type', { status: 415 })
+    }
+
     const totalSize = Number.parseInt(fileMetadata.data.size || '', 10)
     const rangeHeader = _request.headers.get('range')
     const supportsRange = Number.isFinite(totalSize) && totalSize > 0
@@ -103,8 +112,7 @@ export async function GET(
     let end = supportsRange ? totalSize - 1 : 0
     const responseHeaders: Record<string, string> = {
       'Content-Type': mimeType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
       'Accept-Ranges': 'bytes',
     }
 
@@ -120,7 +128,6 @@ export async function GET(
           status: 416,
           headers: {
             'Content-Range': `bytes */${totalSize}`,
-            'Access-Control-Allow-Origin': '*',
             'Accept-Ranges': 'bytes',
           },
         })
@@ -157,8 +164,8 @@ export async function GET(
 
     return new Response(
       JSON.stringify({
+        success: false,
         error: 'Failed to serve media',
-        details: error instanceof Error ? error.message : 'Unknown error',
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )

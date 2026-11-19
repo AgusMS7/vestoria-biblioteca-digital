@@ -1,6 +1,7 @@
 export const runtime = 'nodejs'
 
 import { getCategories } from '@/lib/google-drive'
+import { isGoogleConfigured } from '@/config/env'
 
 export async function GET() {
   try {
@@ -13,14 +14,21 @@ export async function GET() {
   } catch (error) {
     console.error('API /categories error:', error)
 
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error occurred'
+    if (!isGoogleConfigured()) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Service unavailable',
+          code: 'CONFIG_MISSING',
+        },
+        { status: 503 }
+      )
+    }
 
     return Response.json(
       {
         success: false,
         error: 'Failed to fetch categories',
-        details: errorMessage,
       },
       { status: 500 }
     )

@@ -1,6 +1,6 @@
 export const runtime = 'nodejs'
 
-import { getAlbums } from '@/lib/google-drive'
+import { getAlbums, isValidDriveId } from '@/lib/google-drive'
 
 export async function GET(
   _request: Request,
@@ -19,6 +19,16 @@ export async function GET(
       )
     }
 
+    if (!isValidDriveId(id)) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Invalid category ID',
+        },
+        { status: 400 }
+      )
+    }
+
     const albums = await getAlbums(id)
 
     return Response.json({
@@ -28,14 +38,10 @@ export async function GET(
   } catch (error) {
     console.error(`API /categories/[id]/albums error:`, error)
 
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error occurred'
-
     return Response.json(
       {
         success: false,
         error: 'Failed to fetch albums',
-        details: errorMessage,
       },
       { status: 500 }
     )

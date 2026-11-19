@@ -1,6 +1,7 @@
 export const runtime = 'nodejs'
 
-import { getAlbum } from '@/lib/google-drive'
+import { getAlbum, isValidDriveId } from '@/lib/google-drive'
+import { isGoogleConfigured } from '@/config/env'
 
 export async function GET(
   _request: Request,
@@ -14,6 +15,16 @@ export async function GET(
         {
           success: false,
           error: 'Album ID is required',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!isValidDriveId(id)) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Invalid album ID',
         },
         { status: 400 }
       )
@@ -38,14 +49,21 @@ export async function GET(
   } catch (error) {
     console.error(`API /albums/[id] error:`, error)
 
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error occurred'
+    if (!isGoogleConfigured()) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Service unavailable',
+          code: 'CONFIG_MISSING',
+        },
+        { status: 503 }
+      )
+    }
 
     return Response.json(
       {
         success: false,
         error: 'Failed to fetch album',
-        details: errorMessage,
       },
       { status: 500 }
     )
