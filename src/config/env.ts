@@ -41,7 +41,7 @@ export const env = {
   site: {
     /**
      * Nombre visible de la marca. Por defecto 'Vestoria'; cada deploy puede
-     * pisarlo con SITE_NAME (el del cliente usa 'Biblioteca Rosanna').
+     * pisarlo con SITE_NAME.
      */
     get name(): string {
       return getEnvVarOrDefault('SITE_NAME', DEFAULT_SITE_NAME)

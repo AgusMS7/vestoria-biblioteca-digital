@@ -121,7 +121,7 @@ Copiá `.env.example` a `.env.local` y completá los valores (el ejemplo lista l
 | `GOOGLE_CLIENT_EMAIL` | Sí | Email del service account |
 | `GOOGLE_PRIVATE_KEY` | Sí | Clave privada del service account |
 | `GOOGLE_ROOT_FOLDER_ID` | Sí | ID de la carpeta raíz en Drive |
-| `SITE_NAME` | No | Nombre visible de la marca. Si falta, usa `Vestoria`. El deploy del cliente define `SITE_NAME=Biblioteca Rosanna` |
+| `SITE_NAME` | No | Nombre visible de la marca. Si falta, usa `Vestoria` |
 | `SITE_AUTH_USER` | No | Usuario de Basic Auth opcional |
 | `SITE_AUTH_PASS` | No | Contraseña de Basic Auth opcional |
 
