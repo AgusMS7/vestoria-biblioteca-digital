@@ -61,6 +61,7 @@ function WoodShelf({
 }
 
 type SortOrder = 'asc' | 'desc'
+type LoadError = 'config' | 'unknown'
 
 export default function LibraryPage() {
   const [searchQuery, setSearchQuery] = useState('')
@@ -68,7 +69,7 @@ export default function LibraryPage() {
   const [categories, setCategories] = useState<Category[]>([])
   const [categoryAlbums, setCategoryAlbums] = useState<Record<string, Album[]>>({})
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const [error, setError] = useState<LoadError | null>(null)
 
   // Load categories and albums on mount
   useEffect(() => {
@@ -80,7 +81,11 @@ export default function LibraryPage() {
         // Get categories
         const categoriesRes = await fetch('/api/categories')
         if (!categoriesRes.ok) {
-          throw new Error('Failed to load categories')
+          const payload = (await categoriesRes.json().catch(() => null)) as
+            | { code?: string }
+            | null
+          setError(payload?.code === 'CONFIG_MISSING' ? 'config' : 'unknown')
+          return
         }
         const categoriesData = await categoriesRes.json()
         const cats = (categoriesData.data || []) as Category[]
@@ -97,9 +102,8 @@ export default function LibraryPage() {
         }
         setCategoryAlbums(albumsByCategory)
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Unknown error'
-        setError(message)
         console.error('Error loading albums:', err)
+        setError('unknown')
       } finally {
         setLoading(false)
       }
@@ -179,8 +183,16 @@ export default function LibraryPage() {
                 animate={{ opacity: 1, y: 0 }}
                 className="text-center py-20"
               >
-                <p className="text-xl text-red-400">Error al cargar</p>
-                <p className="text-sm text-red-300/70 mt-2">{error}</p>
+                <p className="text-xl text-red-400">
+                  {error === 'config'
+                    ? 'Error al conectar con la biblioteca'
+                    : 'Error al cargar la biblioteca'}
+                </p>
+                <p className="text-sm text-red-300/70 mt-2">
+                  {error === 'config'
+                    ? 'Revisá la configuración de Google Drive del servidor.'
+                    : 'No se pudieron obtener los álbumes. Intentá de nuevo en unos minutos.'}
+                </p>
               </motion.div>
             ) : groupedAlbums.length === 0 ? (
               <motion.div

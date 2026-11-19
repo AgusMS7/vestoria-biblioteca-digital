@@ -21,6 +21,19 @@ function getEnvVarOrDefault(key: string, fallback: string): string {
 }
 
 /**
+ * Indica si las credenciales de Google Drive están configuradas.
+ * No lanza: permite responder con un error controlado cuando faltan.
+ */
+export function isGoogleConfigured(): boolean {
+  return Boolean(
+    process.env.GOOGLE_PROJECT_ID &&
+      process.env.GOOGLE_CLIENT_EMAIL &&
+      process.env.GOOGLE_PRIVATE_KEY &&
+      process.env.GOOGLE_ROOT_FOLDER_ID
+  )
+}
+
+/**
  * Configuración de Google Drive
  * Se valida lazy solo cuando se accede a estas propiedades
  */
