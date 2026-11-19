@@ -73,6 +73,9 @@ export function mapToAlbum(
     return null
   }
 
+  const photoCount = mediaItems.filter((item) => item.type === 'image').length
+  const videoCount = mediaItems.length - photoCount
+
   // Año del álbum: primero el del nombre de la carpeta (ej: "Mi Viaje 2024");
   // si no hay, el del medio más antiguo; si tampoco, queda desconocido.
   const yearMatch = name.match(/(\d{4})/)
@@ -90,6 +93,8 @@ export function mapToAlbum(
     category,
     coverImage,
     mediaCount: mediaItems.length,
+    photoCount,
+    videoCount,
     media: mediaItems,
     dominantColor: getAlbumColor(id), // Color asignado determinísticamente basado en ID
     description: undefined,

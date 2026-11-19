@@ -3,6 +3,7 @@
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { Play } from 'lucide-react'
+import { formatMediaCount } from '@/lib/utils/media-count'
 import type { Album } from '@/types'
 
 interface AlbumCardProps {
@@ -142,7 +143,7 @@ export function AlbumCard({ album, index }: AlbumCardProps) {
                 className="text-[10px] sm:text-xs mt-0.5 relative z-10"
                 style={{ color: colors.textMuted }}
               >
-                {album.mediaCount} fotos
+                {formatMediaCount(album.photoCount, album.videoCount)}
               </p>
             </div>
           </div>

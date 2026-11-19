@@ -12,6 +12,8 @@ export interface Album {
   coverImage: string
   description?: string
   mediaCount: number
+  photoCount: number
+  videoCount: number
   media: Media[]
   dominantColor: { h: number; s: number; l: number }
 }

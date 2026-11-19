@@ -5,6 +5,7 @@ import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ArrowLeft, Play, Calendar, Presentation } from 'lucide-react'
 import { FullscreenViewer, TextureFilters, LoadingOverlay } from '@/components'
+import { formatMediaCount } from '@/lib/utils/media-count'
 import type { Album, Media } from '@/types'
 
 type YearSortOrder = 'asc' | 'desc'
@@ -477,7 +478,7 @@ export default function AlbumPage() {
                         fontStyle: 'italic',
                       }}
                     >
-                      {album.media.length} fotos
+                      {formatMediaCount(album.photoCount, album.videoCount)}
                     </span>
                   </div>
                 </div>
