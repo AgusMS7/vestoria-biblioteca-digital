@@ -8,6 +8,7 @@ import {
   isMediaFile,
 } from './mapper'
 import { categoryCache, albumCache } from '@/lib/cache'
+import { rethrowDriveError } from './errors'
 import { env } from '@/config/env'
 import type { Album } from '@/types/album'
 import type { Media } from '@/types/media'
@@ -61,7 +62,7 @@ export async function getCategories(): Promise<Category[]> {
     return categories
   } catch (error) {
     console.error('Error getting categories:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
@@ -111,7 +112,7 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
     return albums
   } catch (error) {
     console.error('Error getting albums:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
@@ -147,7 +148,7 @@ export async function getAlbum(albumId: string): Promise<Album | null> {
     return getAlbumDetails(albumId, categoryName, folderResponse.data)
   } catch (error) {
     console.error('Error getting album:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
@@ -202,7 +203,7 @@ async function getAlbumDetails(
     return mapToAlbum(folderData, category, coverImage, media)
   } catch (error) {
     console.error('Error getting album details:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 

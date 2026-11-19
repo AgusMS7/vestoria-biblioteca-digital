@@ -1,6 +1,6 @@
 export const runtime = 'nodejs'
 
-import { getAlbums, isValidDriveId } from '@/lib/google-drive'
+import { getAlbums, isDriveNotFoundError, isValidDriveId } from '@/lib/google-drive'
 
 export async function GET(
   _request: Request,
@@ -37,6 +37,16 @@ export async function GET(
     })
   } catch (error) {
     console.error(`API /categories/[id]/albums error:`, error)
+
+    if (isDriveNotFoundError(error)) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Category not found',
+        },
+        { status: 404 }
+      )
+    }
 
     return Response.json(
       {

@@ -1,4 +1,4 @@
-import { getDriveClient, isValidDriveId } from '@/lib/google-drive'
+import { getDriveClient, isDriveNotFoundError, isValidDriveId } from '@/lib/google-drive'
 import type { Readable } from 'node:stream'
 
 export const runtime = 'nodejs'
@@ -161,6 +161,10 @@ export async function GET(
     })
   } catch (error) {
     console.error('Error serving media:', error)
+
+    if (isDriveNotFoundError(error)) {
+      return new Response('File not found', { status: 404 })
+    }
 
     return new Response(
       JSON.stringify({
