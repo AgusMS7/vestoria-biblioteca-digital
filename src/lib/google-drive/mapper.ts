@@ -144,17 +144,3 @@ export function getMediaType(mimeType: string): 'image' | 'video' | null {
   if (mimeType.startsWith('video/')) return 'video'
   return null
 }
-
-/**
- * Obtiene la URL de descarga de un archivo de Google Drive
- */
-export function getDriveFileUrl(fileId: string): string {
-  return `https://drive.google.com/uc?id=${fileId}`
-}
-
-/**
- * Obtiene la URL de vista previa (thumbnail) si está disponible
- */
-export function getDriveThumbnailUrl(fileId: string): string {
-  return `https://drive-thumnail.googleusercontent.com/d/${fileId}`
-}
