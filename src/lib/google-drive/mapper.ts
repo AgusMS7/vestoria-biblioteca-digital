@@ -95,6 +95,7 @@ export function mapToAlbum(
     mediaCount: mediaItems.length,
     photoCount,
     videoCount,
+    hasVideo: videoCount > 0,
     media: mediaItems,
     dominantColor: getAlbumColor(id), // Color asignado determinísticamente basado en ID
     description: undefined,

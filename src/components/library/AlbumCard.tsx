@@ -77,7 +77,7 @@ function BindingRings() {
 
 export function AlbumCard({ album, index }: AlbumCardProps) {
   const router = useRouter()
-  const hasVideo = album.media.some(m => m.type === 'video')
+  const hasVideo = album.hasVideo
   const colors = getAlbumColors(album.dominantColor)
 
   return (

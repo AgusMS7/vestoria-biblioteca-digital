@@ -8,6 +8,7 @@ import {
   isMediaFile,
 } from './mapper'
 import { categoryCache, albumCache } from '@/lib/cache'
+import { mapWithConcurrency } from '@/lib/utils/concurrency'
 import { rethrowDriveError } from './errors'
 import { env } from '@/config/env'
 import type { Album } from '@/types/album'
@@ -90,8 +91,13 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
     const albums: Album[] = []
 
     if (response.data.files) {
-      for (const folder of response.data.files) {
-        const album = await getAlbumDetails(folder.id!, categoryName, folder)
+      const folders = response.data.files.filter((folder) => folder.id)
+
+      const details = await mapWithConcurrency(folders, 4, (folder) =>
+        getAlbumDetails(folder.id!, categoryName, folder)
+      )
+
+      for (const album of details) {
         if (album) {
           albums.push(album)
         }

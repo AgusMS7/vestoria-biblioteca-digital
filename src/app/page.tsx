@@ -1,4 +1,5 @@
 import { getCategories, getAlbums, isDriveNotFoundError } from '@/lib/google-drive'
+import { mapWithConcurrency } from '@/lib/utils/concurrency'
 import { isGoogleConfigured } from '@/config/env'
 import { LibraryClient } from '@/components/library/LibraryClient'
 import type { Album, Category } from '@/types'
@@ -32,13 +33,23 @@ async function loadLibrary(): Promise<{
   }
 
   try {
-    for (const category of categories) {
+    const entries = await mapWithConcurrency(categories, 4, async (category) => {
       try {
-        categoryAlbums[category.name] = await getAlbums(category.id)
+        return [category.name, await getAlbums(category.id)] as const
       } catch (error) {
         // Una categoría borrada entre llamadas no debe tumbar la home.
-        if (isDriveNotFoundError(error)) continue
+        if (isDriveNotFoundError(error)) return null
         throw error
+      }
+    })
+
+    for (const entry of entries) {
+      if (entry) {
+        // La home no navega los medios: se envían solo portada y conteos.
+        categoryAlbums[entry[0]] = entry[1].map((album) => ({
+          ...album,
+          media: [],
+        }))
       }
     }
   } catch (error) {

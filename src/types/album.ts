@@ -14,6 +14,7 @@ export interface Album {
   mediaCount: number
   photoCount: number
   videoCount: number
+  hasVideo: boolean
   media: Media[]
   dominantColor: { h: number; s: number; l: number }
 }
