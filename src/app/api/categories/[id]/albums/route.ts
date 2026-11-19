@@ -1,6 +1,6 @@
 export const runtime = 'nodejs'
 
-import { getAlbums } from '@/lib/google-drive'
+import { getAlbums, isValidDriveId } from '@/lib/google-drive'
 
 export async function GET(
   _request: Request,
@@ -14,6 +14,16 @@ export async function GET(
         {
           success: false,
           error: 'Category ID is required',
+        },
+        { status: 400 }
+      )
+    }
+
+    if (!isValidDriveId(id)) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Invalid category ID',
         },
         { status: 400 }
       )

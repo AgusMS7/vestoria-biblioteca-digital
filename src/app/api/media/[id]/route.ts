@@ -1,4 +1,4 @@
-import { getDriveClient } from '@/lib/google-drive'
+import { getDriveClient, isValidDriveId } from '@/lib/google-drive'
 import type { Readable } from 'node:stream'
 
 export const runtime = 'nodejs'
@@ -80,6 +80,10 @@ export async function GET(
     return new Response('File ID is required', { status: 400 })
   }
 
+  if (!isValidDriveId(fileId)) {
+    return new Response('Invalid file ID', { status: 400 })
+  }
+
   try {
     const drive = getDriveClient()
 
@@ -94,6 +98,11 @@ export async function GET(
     }
 
     const mimeType = fileMetadata.data.mimeType || 'application/octet-stream'
+
+    if (!mimeType.startsWith('image/') && !mimeType.startsWith('video/')) {
+      return new Response('Unsupported media type', { status: 415 })
+    }
+
     const totalSize = Number.parseInt(fileMetadata.data.size || '', 10)
     const rangeHeader = _request.headers.get('range')
     const supportsRange = Number.isFinite(totalSize) && totalSize > 0

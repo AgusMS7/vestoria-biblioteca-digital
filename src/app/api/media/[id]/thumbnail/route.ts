@@ -1,4 +1,4 @@
-import { getDriveClient } from '@/lib/google-drive'
+import { getDriveClient, isValidDriveId } from '@/lib/google-drive'
 import type { Readable } from 'node:stream'
 import sharp from 'sharp'
 
@@ -24,6 +24,10 @@ export async function GET(
 
   if (!fileId) {
     return new Response('File ID is required', { status: 400 })
+  }
+
+  if (!isValidDriveId(fileId)) {
+    return new Response('Invalid file ID', { status: 400 })
   }
 
   // Generar clave de caché única por tipo de archivo
