@@ -14,7 +14,7 @@ function getEnvVar(key: string): string {
   return value
 }
 
-const DEFAULT_SITE_NAME = 'Biblioteca Rosanna'
+const DEFAULT_SITE_NAME = 'Vestoria'
 
 function getEnvVarOrDefault(key: string, fallback: string): string {
   return process.env[key] || fallback
@@ -27,8 +27,8 @@ function getEnvVarOrDefault(key: string, fallback: string): string {
 export const env = {
   site: {
     /**
-     * Nombre visible de la marca. Por defecto mantiene el del cliente
-     * para que su deploy quede idéntico sin configurar nada.
+     * Nombre visible de la marca. Por defecto 'Vestoria'; cada deploy puede
+     * pisarlo con SITE_NAME (el del cliente usa 'Biblioteca Rosanna').
      */
     get name(): string {
       return getEnvVarOrDefault('SITE_NAME', DEFAULT_SITE_NAME)

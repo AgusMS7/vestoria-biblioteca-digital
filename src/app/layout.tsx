@@ -4,7 +4,7 @@ import { SiteNameProvider } from "@/components/layout/SiteNameContext";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: `${env.site.name} — Álbumes Familiares`,
+  title: `${env.site.name} - Biblioteca Digital`,
   description: "Una biblioteca de álbumes de fotos familiares con estética vintage de madera",
   icons: {
     icon: '/book-gift-present-svgrepo-com.svg',
