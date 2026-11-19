@@ -73,9 +73,15 @@ export function mapToAlbum(
     return null
   }
 
-  // Intentar extraer el año del nombre del álbum (ej: "Mi Viaje 2024")
+  // Año del álbum: primero el del nombre de la carpeta (ej: "Mi Viaje 2024");
+  // si no hay, el del medio más antiguo; si tampoco, queda desconocido.
   const yearMatch = name.match(/(\d{4})/)
-  const year = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear()
+  const yearFromName = yearMatch ? Number.parseInt(yearMatch[1], 10) : null
+  const yearFromMedia = mediaItems.reduce<number | null>((oldest, item) => {
+    if (typeof item.year !== 'number') return oldest
+    return oldest === null || item.year < oldest ? item.year : oldest
+  }, null)
+  const year = yearFromName ?? yearFromMedia
 
   return {
     id,

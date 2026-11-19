@@ -7,7 +7,7 @@ import type { Media } from './media'
 export interface Album {
   id: string
   title: string
-  year: number
+  year: number | null
   category: string
   coverImage: string
   description?: string
