@@ -106,16 +106,24 @@ export function FullscreenViewer({
     setVideoCurrentTime(0)
   }, [media.length])
 
-  // Slideshow: advances to next media after 6 seconds
+  // Slideshow: images advance after 6 seconds; videos advance when they end.
   useEffect(() => {
     if (!isSlideshow || media.length <= 1) return
+    if (currentMedia.type !== 'image') return
 
     const interval = setInterval(() => {
       goNext()
     }, 6000)
 
     return () => clearInterval(interval)
-  }, [isSlideshow, media.length, goNext])
+  }, [isSlideshow, media.length, currentMedia.type, goNext])
+
+  // In slideshow mode a video must play on its own so its `ended` event fires.
+  useEffect(() => {
+    if (isSlideshow && currentMedia.type === 'video') {
+      setIsVideoPlaying(true)
+    }
+  }, [isSlideshow, currentMedia.type, currentIndex])
 
   // Keyboard navigation
   useEffect(() => {
@@ -288,6 +296,10 @@ export function FullscreenViewer({
               }}
               onTimeUpdate={(e) => {
                 setVideoCurrentTime(e.currentTarget.currentTime)
+              }}
+              onEnded={() => {
+                setIsVideoPlaying(false)
+                if (isSlideshow) goNext()
               }}
             />
           )}
