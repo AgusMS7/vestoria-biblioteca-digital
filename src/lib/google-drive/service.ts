@@ -9,6 +9,7 @@ import {
 } from './mapper'
 import { categoryCache, albumCache } from '@/lib/cache'
 import { mapWithConcurrency } from '@/lib/utils/concurrency'
+import { listAllFiles } from './list'
 import { rethrowDriveError } from './errors'
 import { env } from '@/config/env'
 import type { Album } from '@/types/album'
@@ -29,7 +30,7 @@ export async function getCategories(): Promise<Category[]> {
     const drive = getDriveClient()
     const rootFolderId = env.google.rootFolderId
 
-    const response = await drive.files.list({
+    const folders = await listAllFiles(drive, {
       q: `'${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
       spaces: 'drive',
       fields: 'files(id, name)',
@@ -39,13 +40,11 @@ export async function getCategories(): Promise<Category[]> {
 
     const categories: Category[] = []
 
-    if (response.data.files) {
-      for (const folder of response.data.files) {
-        const category = mapToCategory(folder)
+    for (const folder of folders) {
+      const category = mapToCategory(folder)
 
-        if (category) {
-          categories.push(category)
-        }
+      if (category) {
+        categories.push(category)
       }
     }
 
@@ -80,7 +79,7 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
     const categoryName = categoryResponse.data.name || 'Unknown'
 
     // Listar álbumes en la categoría
-    const response = await drive.files.list({
+    const folders = await listAllFiles(drive, {
       q: `'${categoryId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
       spaces: 'drive',
       fields: 'files(id, name, imageMediaMetadata, videoMediaMetadata)',
@@ -90,17 +89,15 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
 
     const albums: Album[] = []
 
-    if (response.data.files) {
-      const folders = response.data.files.filter((folder) => folder.id)
+    const albumFolders = folders.filter((folder) => folder.id)
 
-      const details = await mapWithConcurrency(folders, 4, (folder) =>
-        getAlbumDetails(folder.id!, categoryName, folder)
-      )
+    const details = await mapWithConcurrency(albumFolders, 4, (folder) =>
+      getAlbumDetails(folder.id!, categoryName, folder)
+    )
 
-      for (const album of details) {
-        if (album) {
-          albums.push(album)
-        }
+    for (const album of details) {
+      if (album) {
+        albums.push(album)
       }
     }
 
@@ -161,15 +158,13 @@ async function getAlbumDetails(
     const drive = getDriveClient()
 
     // Obtener todos los archivos del álbum (incluyendo timestamps)
-    const filesResponse = await drive.files.list({
+    const files = await listAllFiles(drive, {
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
       fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })
-
-    const files = filesResponse.data.files || []
 
     // Separar portada y medias
     let coverFile = null
