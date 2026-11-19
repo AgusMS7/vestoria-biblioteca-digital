@@ -1,242 +1,66 @@
-'use client'
+import { getCategories, getAlbums, isDriveNotFoundError } from '@/lib/google-drive'
+import { isGoogleConfigured } from '@/config/env'
+import { LibraryClient } from '@/components/library/LibraryClient'
+import type { Album, Category } from '@/types'
 
-import { useEffect, useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { Header, AlbumCard, TextureFilters, LoadingOverlay } from '@/components'
-import type { Category, Album } from '@/types'
+/**
+ * La home se renderiza en el servidor con los datos ya resueltos para no
+ * mostrar el estado vacío antes de hidratar. El cliente queda para búsqueda y
+ * orden. Sin caché estática: la lista vive en Google Drive y puede cambiar.
+ */
+export const dynamic = 'force-dynamic'
 
-function WoodShelf({
-  label,
-  children,
-}: {
-  label: string
-  children: React.ReactNode
-}) {
-  return (
-    <section className="mb-0">
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 px-6 sm:px-10 lg:px-16 py-6 pb-10">
-        {children}
-      </div>
-
-      <div className="relative">
-        <div className="wood-shelf h-14 relative overflow-hidden">
-          <div
-            className="absolute inset-0"
-            style={{
-              background:
-                'linear-gradient(to bottom, rgba(255,255,255,0.05) 0%, transparent 15%, transparent 70%, rgba(0,0,0,0.3) 100%)',
-            }}
-          />
-
-          <div
-            className="absolute top-0 left-0 right-0 h-[2px]"
-            style={{
-              background: 'linear-gradient(to bottom, rgba(0,0,0,0.6), transparent)',
-            }}
-          />
-
-          <div className="absolute inset-0 flex items-center justify-center">
-            <span className="wood-engraved text-base sm:text-lg uppercase tracking-[0.15em]">
-              {label}
-            </span>
-          </div>
-
-          <div
-            className="absolute bottom-0 left-0 right-0 h-[2px]"
-            style={{
-              background: 'linear-gradient(to top, rgba(0,0,0,0.5), transparent)',
-            }}
-          />
-        </div>
-
-        <div
-          className="h-6"
-          style={{
-            background: 'linear-gradient(to bottom, rgba(0,0,0,0.5), transparent)',
-          }}
-        />
-      </div>
-    </section>
-  )
-}
-
-type SortOrder = 'asc' | 'desc'
 type LoadError = 'config' | 'unknown'
 
-export default function LibraryPage() {
-  const [searchQuery, setSearchQuery] = useState('')
-  const [sortOrder, setSortOrder] = useState<SortOrder>('asc')
-  const [categories, setCategories] = useState<Category[]>([])
-  const [categoryAlbums, setCategoryAlbums] = useState<Record<string, Album[]>>({})
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<LoadError | null>(null)
+async function loadLibrary(): Promise<{
+  categories: Category[]
+  categoryAlbums: Record<string, Album[]>
+  error: LoadError | null
+}> {
+  const categoryAlbums: Record<string, Album[]> = {}
+  let categories: Category[] = []
 
-  // Load categories and albums on mount
-  useEffect(() => {
-    const loadData = async () => {
+  try {
+    categories = await getCategories()
+  } catch (error) {
+    console.error('Error loading categories:', error)
+    return {
+      categories: [],
+      categoryAlbums,
+      error: isGoogleConfigured() ? 'unknown' : 'config',
+    }
+  }
+
+  try {
+    for (const category of categories) {
       try {
-        setLoading(true)
-        setError(null)
-
-        // Get categories
-        const categoriesRes = await fetch('/api/categories')
-        if (!categoriesRes.ok) {
-          const payload = (await categoriesRes.json().catch(() => null)) as
-            | { code?: string }
-            | null
-          setError(payload?.code === 'CONFIG_MISSING' ? 'config' : 'unknown')
-          return
-        }
-        const categoriesData = await categoriesRes.json()
-        const cats = (categoriesData.data || []) as Category[]
-        setCategories(cats)
-
-        // Get albums for each category
-        const albumsByCategory: Record<string, Album[]> = {}
-        for (const category of cats) {
-          const albumsRes = await fetch(`/api/categories/${category.id}/albums`)
-          if (albumsRes.ok) {
-            const albumsData = await albumsRes.json()
-            albumsByCategory[category.name] = (albumsData.data || []) as Album[]
-          }
-        }
-        setCategoryAlbums(albumsByCategory)
-      } catch (err) {
-        console.error('Error loading albums:', err)
-        setError('unknown')
-      } finally {
-        setLoading(false)
+        categoryAlbums[category.name] = await getAlbums(category.id)
+      } catch (error) {
+        // Una categoría borrada entre llamadas no debe tumbar la home.
+        if (isDriveNotFoundError(error)) continue
+        throw error
       }
     }
+  } catch (error) {
+    console.error('Error loading albums:', error)
+    return {
+      categories: [],
+      categoryAlbums: {},
+      error: isGoogleConfigured() ? 'unknown' : 'config',
+    }
+  }
 
-    loadData()
-  }, [])
+  return { categories, categoryAlbums, error: null }
+}
 
-  const groupedAlbums = useMemo(() => {
-    return categories
-      .filter((cat) => categoryAlbums[cat.name])
-      .map((cat) => {
-        // Filtrar álbumes por título o categoría
-        let albums = categoryAlbums[cat.name].filter((album) => {
-          const matchesTitle = album.title
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-          const matchesCategory = cat.name
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase())
-          return matchesTitle || matchesCategory
-        })
-
-        // Aplicar ordenamiento
-        albums = [...albums].sort((a, b) => {
-          const comparison = a.title.localeCompare(b.title, 'es', {
-            numeric: true,
-            sensitivity: 'base',
-          })
-          return sortOrder === 'asc' ? comparison : -comparison
-        })
-
-        return {
-          label: cat.name,
-          albums,
-        }
-      })
-      .filter((group) => group.albums.length > 0)
-  }, [categories, categoryAlbums, searchQuery, sortOrder])
-
-  let globalIndex = 0
+export default async function LibraryPage() {
+  const { categories, categoryAlbums, error } = await loadLibrary()
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'hsl(25 20% 10%)' }}>
-      <TextureFilters />
-      <LoadingOverlay isVisible={loading} />
-
-      <Header
-        searchQuery={searchQuery}
-        setSearchQuery={setSearchQuery}
-        sortOrder={sortOrder}
-        setSortOrder={setSortOrder}
-      />
-
-      <div className="flex min-h-[calc(100vh-180px)]">
-        <div
-          className="wood-frame-left w-4 sm:w-6 lg:w-10 xl:w-14 flex-shrink-0 relative z-30"
-          style={{
-            boxShadow:
-              '4px 0 15px rgba(0,0,0,0.6), inset -2px 0 6px rgba(0,0,0,0.4)',
-          }}
-        />
-
-        <main className="wood-back-wall flex-1 relative overflow-hidden">
-          <div
-            className="absolute inset-0 pointer-events-none z-20"
-            style={{
-              boxShadow:
-                'inset 0 0 80px rgba(0,0,0,0.6), inset 0 0 150px rgba(0,0,0,0.3)',
-            }}
-          />
-
-          <div className="relative z-10 py-4 sm:py-6">
-            {error ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20"
-              >
-                <p className="text-xl text-red-400">
-                  {error === 'config'
-                    ? 'Error al conectar con la biblioteca'
-                    : 'Error al cargar la biblioteca'}
-                </p>
-                <p className="text-sm text-red-300/70 mt-2">
-                  {error === 'config'
-                    ? 'Revisá la configuración de Google Drive del servidor.'
-                    : 'No se pudieron obtener los álbumes. Intentá de nuevo en unos minutos.'}
-                </p>
-              </motion.div>
-            ) : groupedAlbums.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20"
-              >
-                <p className="text-xl text-amber-200/80">
-                  No hay álbumes disponibles
-                </p>
-                <p className="text-amber-100/40 mt-2">
-                  Agrega categorías y álbumes a tu Google Drive para comenzar
-                </p>
-              </motion.div>
-            ) : (
-              groupedAlbums.map(({ label, albums: groupAlbums }) => {
-                const startIndex = globalIndex
-                globalIndex += groupAlbums.length
-                return (
-                  <WoodShelf key={label} label={String(label)}>
-                    {groupAlbums.map((album, idx) => (
-                      <AlbumCard
-                        key={album.id}
-                        album={album}
-                        index={startIndex + idx}
-                      />
-                    ))}
-                  </WoodShelf>
-                )
-              })
-            )}
-          </div>
-        </main>
-
-        <div
-          className="wood-frame-right w-4 sm:w-6 lg:w-10 xl:w-14 flex-shrink-0 relative z-30"
-          style={{
-            boxShadow:
-              '-4px 0 15px rgba(0,0,0,0.6), inset 2px 0 6px rgba(0,0,0,0.4)',
-          }}
-        />
-      </div>
-
-
-    </div>
+    <LibraryClient
+      initialCategories={categories}
+      initialCategoryAlbums={categoryAlbums}
+      initialError={error}
+    />
   )
 }
