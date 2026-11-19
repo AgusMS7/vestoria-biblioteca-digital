@@ -26,7 +26,6 @@ Crear una plataforma web intuitiva que permita a los usuarios organizar y visual
 | **Autenticación Drive** | Service Account (JWT) |
 | **SDK Drive** | googleapis (oficial) |
 | **Optimización de Imágenes** | sharp (compresión de thumbnails) |
-| **Extracción de Metadatos** | exifr — endpoint `/api/media/[id]/exif` presente, **no conectado** al flujo de la UI |
 
 ## 📁 Estructura de Carpetas
 
@@ -36,11 +35,10 @@ src/
 │   ├── api/
 │   │   ├── categories/route.ts  # GET /api/categories
 │   │   ├── categories/[id]/albums/  # GET /api/categories/[id]/albums
-│   │   ├── albums/[id]/         # GET /api/albums/[id] y /media (este último sin uso)
+│   │   ├── albums/[id]/         # GET /api/albums/[id]
 │   │   └── media/[id]/
 │   │       ├── route.ts         # GET /api/media/[id] (soporta Range)
-│   │       ├── thumbnail/route.ts  # GET /api/media/[id]/thumbnail
-│   │       └── exif/route.ts    # GET /api/media/[id]/exif (sin uso en la UI)
+│   │       └── thumbnail/route.ts  # GET /api/media/[id]/thumbnail
 │   ├── album/
 │   │   ├── layout.tsx
 │   │   └── [id]/
@@ -193,8 +191,8 @@ La aplicación implementa un sistema completo de servicio de multimedia desde Go
 Sirve el archivo multimedia completo (imagen o video) desde Google Drive.
 - **Parámetros**: ID del archivo (en la ruta)
 - **Respuesta**: buffer del archivo completo (o del rango pedido) con headers de caché
-- **Cache**: 1 año (max-age=31536000)
-- **Características**: soporte de `Range` (206/416), no redirige (evita problemas de CORS); el cuerpo se arma en memoria, no es streaming real
+- **Cache**: 1 hora (max-age=3600, stale-while-revalidate=86400)
+- **Características**: soporte de `Range` (206/416), no redirige; el cuerpo se arma en memoria, no es streaming real
 
 #### GET /api/media/[id]/thumbnail
 Sirve una miniatura optimizada del archivo.
@@ -202,7 +200,7 @@ Sirve una miniatura optimizada del archivo.
   - `id`: ID del archivo (en la ruta)
   - `size`: (query) `small` (200px, por defecto), `medium` (400px), `large` (800px)
 - **Respuesta**: Imagen JPEG comprimida (~10-50 KB típicamente)
-- **Cache**: 1 año + caché en memoria (máx. 100 entradas)
+- **Cache**: 1 día (max-age=86400, stale-while-revalidate=604800) + caché en memoria (máx. 100 entradas)
 - **Características**:
   - Usa `thumbnailLink` de Google Drive cuando disponibles
   - Si no, comprime localmente con `sharp` (resize + JPEG 80% calidad)
@@ -254,17 +252,10 @@ Implementación optimizada con TTL (Time To Live):
 
 - **Categorías**: 1 hora
 - **Álbumes**: 1 hora
-- **Media**: 30 minutos
-- **Portadas**: 1 hora
 
 **Importante:** esta caché vive en memoria de cada proceso. En Vercel cada instancia tiene su propia memoria, así que no se comparte ni persiste entre instancias y en la práctica acierta poco o nada. No hay índice local ni caché externo.
 
-El caché se invalida automáticamente tras expirar. Para invalidación manual:
-```typescript
-invalidateCategoryCache(categoryId)
-invalidateAlbumCache(albumId)
-invalidateAllCache()
-```
+El caché se invalida automáticamente al expirar; no hay invalidación manual.
 
 ### Optimizaciones Implementadas
 
@@ -273,8 +264,7 @@ invalidateAllCache()
 ✅ Lazy loading de imágenes en grilla con IntersectionObserver (300px margin)
 ✅ Precargas de media en visor para navegación fluida
 ✅ Metadata completa (dimensiones, duración) sin descargar archivos
-✅ Headers de caché agresivos (1 año, immutable)
-✅ CORS habilitado para servir desde cualquier origen
+✅ Headers de caché con `stale-while-revalidate`
 ✅ Ordenamiento alphabético en biblioteca y cronológico en álbumes
 ✅ Agrupación automática por mes-año dentro de álbumes
 
@@ -286,7 +276,6 @@ Cada álbum agrupa automáticamente las fotografías y vídeos por mes-año. El 
 2. **`modifiedTime` de Google Drive** como fallback
 
 **Importante:**
-- **EXIF no participa del flujo principal**: existe el endpoint `/api/media/[id]/exif` y el extractor, pero ningún componente de la UI lo llama todavía.
 - `createdTime` de Google Drive se evita a propósito.
 
 **Comportamiento especial:**
@@ -375,8 +364,6 @@ Asegúrate de que el hosting soporta:
     │  │ service.ts: Lógica de Negocio           │ │
     │  │ - getCategories()                       │ │
     │  │ - getAlbums()                           │ │
-    │  │ - getMedia()                            │ │
-    │  │ - listFolderContents()                  │ │
     │  └─────────────────────────────────────────┘ │
     │                      ↓                        │
     │  ┌─────────────────────────────────────────┐ │
@@ -403,7 +390,6 @@ Asegúrate de que el hosting soporta:
 - **Acceso a Drive restringido**: solo el Service Account autenticado (lectura) accede a Google Drive. El sitio en sí no pide login: quien tenga la URL ve el catálogo
 - **No hay credenciales en frontend**: Las credenciales están solo en variables de entorno del servidor
 - **Lectura solo**: El Service Account solo tiene permisos de lectura (`drive.readonly`)
-- **CORS habilitado**: Las API Routes pueden ser consumidas desde el frontend
 - **Basic Auth opcional**: si se definen `SITE_AUTH_USER` y `SITE_AUTH_PASS`, el sitio pide login; sin ellas queda abierto como antes
 - **No indexación**: todas las respuestas llevan `X-Robots-Tag: noindex, nofollow`; `robots.txt` permite el rastreo para que Google pueda leer el header
 
