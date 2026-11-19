@@ -112,8 +112,7 @@ export async function GET(
     let end = supportsRange ? totalSize - 1 : 0
     const responseHeaders: Record<string, string> = {
       'Content-Type': mimeType,
-      'Cache-Control': 'public, max-age=31536000, immutable',
-      'Access-Control-Allow-Origin': '*',
+      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
       'Accept-Ranges': 'bytes',
     }
 
@@ -129,7 +128,6 @@ export async function GET(
           status: 416,
           headers: {
             'Content-Range': `bytes */${totalSize}`,
-            'Access-Control-Allow-Origin': '*',
             'Accept-Ranges': 'bytes',
           },
         })

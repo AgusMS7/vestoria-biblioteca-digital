@@ -42,7 +42,6 @@ export async function GET(
         'Content-Type': 'image/jpeg',
         'Content-Length': buffer.length.toString(),
         'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
-        'Access-Control-Allow-Origin': '*',
       },
     })
   }
@@ -103,8 +102,7 @@ export async function GET(
             headers: {
               'Content-Type': 'image/jpeg',
               'Content-Length': buffer.length.toString(),
-              'Cache-Control': 'public, max-age=31536000, immutable',
-              'Access-Control-Allow-Origin': '*',
+              'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
             },
           })
         } else {
@@ -125,8 +123,7 @@ export async function GET(
       return new Response(null, {
         status: 204,
         headers: {
-          'Cache-Control': 'public, max-age=86400',
-          'Access-Control-Allow-Origin': '*',
+          'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
         },
       })
     }
@@ -183,8 +180,7 @@ export async function GET(
                   headers: {
                     'Content-Type': 'image/jpeg',
                     'Content-Length': compressedBuffer.length.toString(),
-                    'Cache-Control': 'public, max-age=31536000, immutable',
-                    'Access-Control-Allow-Origin': '*',
+                    'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
                   },
                 })
               )
@@ -198,8 +194,7 @@ export async function GET(
                   headers: {
                     'Content-Type': mimeType,
                     'Content-Length': fallbackBuffer.length.toString(),
-                    'Cache-Control': 'public, max-age=31536000, immutable',
-                    'Access-Control-Allow-Origin': '*',
+                    'Cache-Control': 'public, max-age=86400, stale-while-revalidate=604800',
                   },
                 })
               )
