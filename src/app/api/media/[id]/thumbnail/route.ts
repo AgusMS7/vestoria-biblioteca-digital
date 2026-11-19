@@ -76,8 +76,11 @@ export async function GET(
       }
       const sizeParam = sizeMap[size] || 'w200-h200'
 
-      // Reemplazar el parámetro de tamaño existente (=s, =w320, etc)
-      const resizedUrl = thumbnailUrl.replace(/=w?\d+.*$/, `=${sizeParam}`)
+      // Reemplazar el parámetro de tamaño existente (=s220, =w320, =w200-h200…)
+      const resizedUrl = thumbnailUrl.replace(
+        /=[swh]\d+(?:-[swh]\d+)?/,
+        `=${sizeParam}`
+      )
 
       try {
         const thumbnailResponse = await fetch(resizedUrl, {

@@ -180,9 +180,9 @@ async function getAlbumDetails(
     // Obtener portada (primero cover file, sino primer media)
     let coverImage = ''
     if (coverFile) {
-      coverImage = `/api/media/${coverFile.id}/thumbnail`
+      coverImage = `/api/media/${coverFile.id}/thumbnail?size=large`
     } else if (mediaFiles.length > 0) {
-      coverImage = `/api/media/${mediaFiles[0].id}/thumbnail`
+      coverImage = `/api/media/${mediaFiles[0].id}/thumbnail?size=large`
     }
 
     // Mapear archivos multimedia

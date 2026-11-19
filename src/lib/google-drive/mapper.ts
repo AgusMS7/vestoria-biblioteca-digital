@@ -52,7 +52,7 @@ export function mapToMediaItem(
     width,
     height,
     duration,
-    thumbnailUrl: `/api/media/${id}/thumbnail`,
+    thumbnailUrl: `/api/media/${id}/thumbnail?size=large`,
     mediaUrl: `/api/media/${id}`,
   }
 }
