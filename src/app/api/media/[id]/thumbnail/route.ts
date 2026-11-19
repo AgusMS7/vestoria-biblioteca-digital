@@ -218,8 +218,8 @@ export async function GET(
 
     return new Response(
       JSON.stringify({
+        success: false,
         error: 'Failed to serve thumbnail',
-        details: error instanceof Error ? error.message : 'Unknown error',
       }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     )

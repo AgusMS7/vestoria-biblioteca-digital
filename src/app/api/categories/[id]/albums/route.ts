@@ -28,14 +28,10 @@ export async function GET(
   } catch (error) {
     console.error(`API /categories/[id]/albums error:`, error)
 
-    const errorMessage =
-      error instanceof Error ? error.message : 'Unknown error occurred'
-
     return Response.json(
       {
         success: false,
         error: 'Failed to fetch albums',
-        details: errorMessage,
       },
       { status: 500 }
     )
