@@ -40,16 +40,7 @@ export async function getCategories(): Promise<Category[]> {
 
     if (response.data.files) {
       for (const folder of response.data.files) {
-        // Contar álbumes en cada categoría
-        const albumsResponse = await drive.files.list({
-          q: `'${folder.id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-          spaces: 'drive',
-          fields: 'files(id)',
-          pageSize: 1,
-        })
-
-        const albumCount = albumsResponse.data.files?.length || 0
-        const category = mapToCategory(folder, albumCount)
+        const category = mapToCategory(folder)
 
         if (category) {
           categories.push(category)

@@ -94,8 +94,7 @@ export function mapToAlbum(
  * Transforma una carpeta de Google Drive (categoría) en nuestro modelo de Category
  */
 export function mapToCategory(
-  driveFolder: drive_v3.Schema$File,
-  albumCount: number
+  driveFolder: drive_v3.Schema$File
 ): Category | null {
   const id = driveFolder?.id
   const name = driveFolder?.name
@@ -107,7 +106,6 @@ export function mapToCategory(
   return {
     id,
     name,
-    albumCount,
   }
 }
 
