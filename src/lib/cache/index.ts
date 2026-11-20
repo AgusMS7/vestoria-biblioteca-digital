@@ -11,3 +11,9 @@ import type { Album } from '@/types/album'
  */
 export const categoryCache = new MemoryCache<Category[]>()
 export const albumCache = new MemoryCache<Album[]>()
+
+/** Fecha EXIF por `id+modifiedTime`; `null` = se intentó y no había. */
+export const exifDateCache = new MemoryCache<{
+  year: number
+  month?: number
+} | null>()

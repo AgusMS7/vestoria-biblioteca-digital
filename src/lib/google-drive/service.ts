@@ -10,6 +10,8 @@ import {
 import { categoryCache, albumCache } from '@/lib/cache'
 import { mapWithConcurrency } from '@/lib/utils/concurrency'
 import { listAllFiles } from './list'
+import { extractYearMonthFromName } from './date-extractor'
+import { readExifDates } from './exif-reader'
 import { rethrowDriveError } from './errors'
 import { env } from '@/config/env'
 import type { Album } from '@/types/album'
@@ -191,6 +193,9 @@ async function getAlbumDetails(
       .map((file) => mapToMediaItem(file))
       .filter((m): m is Media => m !== null)
 
+    // EXIF solo como respaldo de los medios sin fecha en el nombre.
+    await applyExifFallback(drive, mediaFiles, media)
+
     // Mapear álbum
     return mapToAlbum(folderData, category, coverImage, media)
   } catch (error) {
@@ -200,3 +205,43 @@ async function getAlbumDetails(
 }
 
 
+
+/**
+ * Completa year/month leyendo EXIF DateTimeOriginal de los medios de imagen
+ * cuyo nombre no trae fecha. Lo no resuelto queda con modifiedTime.
+ */
+async function applyExifFallback(
+  drive: ReturnType<typeof getDriveClient>,
+  files: drive_v3.Schema$File[],
+  media: Media[]
+): Promise<void> {
+  const eligible = files.filter(
+    (file) =>
+      file.id &&
+      file.mimeType &&
+      isMediaFile(file.mimeType) &&
+      file.mimeType.startsWith('image/') &&
+      !extractYearMonthFromName(file.name ?? '')
+  )
+
+  if (eligible.length === 0) {
+    return
+  }
+
+  const dates = await readExifDates(drive, eligible)
+
+  if (dates.size === 0) {
+    return
+  }
+
+  const mediaById = new Map(media.map((item) => [item.id, item]))
+
+  for (const [id, date] of dates) {
+    const item = mediaById.get(id)
+
+    if (item) {
+      item.year = date.year
+      item.month = date.month
+    }
+  }
+}

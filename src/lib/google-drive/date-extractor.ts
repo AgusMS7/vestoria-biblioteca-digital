@@ -15,17 +15,14 @@ function isValidYear(year: number): boolean {
 }
 
 /**
- * Extrae año Y mes de un archivo multimedia
+ * Extrae año Y mes de un nombre de archivo.
  *
- * Retorna { year: number, month?: number } o null si no puede determinarse
+ * Retorna { year: number, month?: number } o null si el nombre no trae fecha.
+ * Solo considera patrones de alta confianza; no mira metadatos de Drive.
  */
-export function extractYearMonthFromMetadata(
-  fileName: string,
-  modifiedTime?: string
+export function extractYearMonthFromName(
+  fileName: string
 ): { year: number; month?: number } | null {
-  let year: number | undefined
-  let month: number | undefined
-
   // Nivel 3: Fecha válida en nombre (MÁXIMA CONFIANZA en patrones claros)
   // Patrones específicos que indicán fecha real:
   // - IMG_YYYYMMDD (cámaras estándar)
@@ -72,6 +69,25 @@ export function extractYearMonthFromMetadata(
     }
   }
 
+  return null
+}
+
+/**
+ * Extrae año Y mes de un archivo multimedia.
+ *
+ * Prioridad: patrón en el nombre → `modifiedTime` de Drive.
+ * `createdTime` se evita a propósito.
+ */
+export function extractYearMonthFromMetadata(
+  fileName: string,
+  modifiedTime?: string
+): { year: number; month?: number } | null {
+  const fromName = extractYearMonthFromName(fileName)
+
+  if (fromName) {
+    return fromName
+  }
+
   // Nivel 4: modifiedTime (media confianza)
   // IMPORTANTE: modifiedTime es menos confiable (puede ser fecha de modificación en Drive, no del recuerdo)
   // Pero es mejor que nada para archivos sin metadata
@@ -79,8 +95,8 @@ export function extractYearMonthFromMetadata(
     try {
       const date = new Date(modifiedTime)
       if (!isNaN(date.getTime())) {
-        year = date.getFullYear()
-        month = date.getMonth() + 1 // getMonth() retorna 0-11
+        const year = date.getFullYear()
+        const month = date.getMonth() + 1 // getMonth() retorna 0-11
         if (isValidYear(year)) {
           return { year, month }
         }
