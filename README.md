@@ -393,10 +393,6 @@ Asegúrate de que el hosting soporta:
 - **Basic Auth opcional**: si se definen `SITE_AUTH_USER` y `SITE_AUTH_PASS`, el sitio pide login; sin ellas queda abierto como antes
 - **No indexación**: todas las respuestas llevan `X-Robots-Tag: noindex, nofollow`; `robots.txt` permite el rastreo para que Google pueda leer el header
 
-## 📈 Arquitectura y Decisiones
-
-Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI_CONTEXT.md](./AI_CONTEXT.md).
-
 ## 🔮 Mejoras Futuras
 
 - **Caché inteligente**: Implementar caché de metadatos para reducir llamadas a Google Drive
@@ -416,7 +412,7 @@ Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI
 
 ## 👨‍💻 Desarrollo Continuo
 
-Este proyecto está en desarrollo activo. Para cambios no previstos o decisiones de arquitectura, ver [AI_CONTEXT.md](./AI_CONTEXT.md).
+Este proyecto está en desarrollo activo.
 
 ---
 
