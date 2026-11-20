@@ -419,7 +419,7 @@ export default function AlbumPage() {
   }
 
   return (
-    <div className="min-h-screen paper-background">
+    <div className="flex-1 flex flex-col paper-background">
       <TextureFilters />
       <LoadingOverlay isVisible={loading} />
 
@@ -552,9 +552,9 @@ export default function AlbumPage() {
         </>
       )}
 
-      <main className="min-h-[calc(100vh-120px)] relative z-10">
+      <main className="flex-1 relative z-10">
         {album ? (
-          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-10 sm:py-14">
+          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 sm:pt-14 pb-4">
             {album.media.length === 0 ? (
               <div className="text-center text-zinc-500">
                 <p>No hay archivos multimedia en este álbum</p>

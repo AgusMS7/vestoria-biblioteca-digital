@@ -113,7 +113,7 @@ export function LibraryClient({
   let globalIndex = 0
 
   return (
-    <div className="min-h-screen" style={{ backgroundColor: 'hsl(25 20% 10%)' }}>
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: 'hsl(25 20% 10%)' }}>
       <TextureFilters />
 
       <Header
@@ -123,7 +123,7 @@ export function LibraryClient({
         setSortOrder={setSortOrder}
       />
 
-      <div className="flex min-h-[calc(100vh-180px)]">
+      <div className="flex flex-1">
         <div
           className="wood-frame-left w-4 sm:w-6 lg:w-10 xl:w-14 flex-shrink-0 relative z-30"
           style={{
@@ -141,9 +141,9 @@ export function LibraryClient({
             }}
           />
 
-          <div className="relative z-10 py-4 sm:py-6">
+          <div className="relative z-10 pt-4 sm:pt-6 pb-2">
             {initialError ? (
-              <div className="text-center py-20 fade-in-up">
+              <div className="min-h-[40vh] flex items-center justify-center text-center py-8 fade-in-up">
                 <p className="text-xl text-red-400">
                   {initialError === 'config'
                     ? 'Error al conectar con la biblioteca'
@@ -156,7 +156,7 @@ export function LibraryClient({
                 </p>
               </div>
             ) : groupedAlbums.length === 0 ? (
-              <div className="text-center py-20 fade-in-up">
+              <div className="text-center py-8 fade-in-up">
                 <p className="text-xl text-amber-200/80">
                   No hay álbumes disponibles
                 </p>
