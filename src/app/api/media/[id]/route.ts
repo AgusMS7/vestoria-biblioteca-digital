@@ -1,7 +1,14 @@
-import { getDriveClient, isDriveNotFoundError, isValidDriveId } from '@/lib/google-drive'
+import { getDriveClient, isDriveNotFoundError, isMediaFile, isValidDriveId } from '@/lib/google-drive'
+import type { drive_v3 } from 'googleapis'
 import type { Readable } from 'node:stream'
+import sharp from 'sharp'
 
 export const runtime = 'nodejs'
+
+const HEIC_MIME_TYPES = new Set(['image/heic', 'image/heif'])
+
+const MEDIA_CACHE_CONTROL =
+  'public, max-age=3600, stale-while-revalidate=86400'
 
 function parseRangeHeader(rangeHeader: string, totalSize: number) {
   const match = /^bytes=(\d*)-(\d*)$/.exec(rangeHeader.trim())
@@ -65,6 +72,78 @@ function streamToBuffer(stream: Readable): Promise<Buffer> {
 }
 
 /**
+ * Descarga el original, lo convierte a JPEG y, si sharp no puede decodificar
+ * HEIC/HEIF, devuelve la miniatura de Drive en tamaño grande.
+ */
+async function serveConvertedImage(
+  drive: drive_v3.Drive,
+  fileId: string
+): Promise<Response> {
+  const headers = {
+    'Content-Type': 'image/jpeg',
+    'Cache-Control': MEDIA_CACHE_CONTROL,
+  }
+
+  try {
+    const mediaResponse = await drive.files.get(
+      { fileId, alt: 'media' },
+      { responseType: 'stream' }
+    )
+
+    const original = await streamToBuffer(mediaResponse.data as Readable)
+    const jpeg = await sharp(original).jpeg({ quality: 90 }).toBuffer()
+
+    return new Response(new Uint8Array(jpeg), { status: 200, headers })
+  } catch (error) {
+    console.warn(
+      `HEIC/HEIF conversion failed for ${fileId}; falling back to the drive thumbnail`,
+      error
+    )
+  }
+
+  const thumbnail = await fetchDriveThumbnail(drive, fileId)
+
+  if (thumbnail) {
+    return new Response(new Uint8Array(thumbnail), { status: 200, headers })
+  }
+
+  return new Response('Unsupported media type', { status: 415 })
+}
+
+async function fetchDriveThumbnail(
+  drive: drive_v3.Drive,
+  fileId: string
+): Promise<Buffer | null> {
+  const metadata = await drive.files.get({
+    fileId,
+    fields: 'thumbnailLink',
+  })
+
+  const thumbnailLink = metadata.data.thumbnailLink
+
+  if (!thumbnailLink) {
+    return null
+  }
+
+  const url = thumbnailLink.replace(/=[swh]\d+(?:-[swh]\d+)?/, '=w1600')
+
+  try {
+    const response = await fetch(url, {
+      headers: { 'User-Agent': 'Vestoria/1.0' },
+    })
+
+    if (!response.ok) {
+      return null
+    }
+
+    return Buffer.from(await response.arrayBuffer())
+  } catch (error) {
+    console.warn(`Drive thumbnail fetch failed for ${fileId}`, error)
+    return null
+  }
+}
+
+/**
  * GET /api/media/[id]
  *
  * Sirve el archivo multimedia completo desde Google Drive
@@ -99,8 +178,14 @@ export async function GET(
 
     const mimeType = fileMetadata.data.mimeType || 'application/octet-stream'
 
-    if (!mimeType.startsWith('image/') && !mimeType.startsWith('video/')) {
+    if (!isMediaFile(mimeType)) {
       return new Response('Unsupported media type', { status: 415 })
+    }
+
+    // HEIC/HEIF no se reproduce en la mayoría de los navegadores: se convierte
+    // a JPEG (o se sirve la miniatura de Drive si sharp no puede decodificarlo).
+    if (HEIC_MIME_TYPES.has(mimeType)) {
+      return await serveConvertedImage(drive, fileId)
     }
 
     const totalSize = Number.parseInt(fileMetadata.data.size || '', 10)
@@ -112,7 +197,7 @@ export async function GET(
     let end = supportsRange ? totalSize - 1 : 0
     const responseHeaders: Record<string, string> = {
       'Content-Type': mimeType,
-      'Cache-Control': 'public, max-age=3600, stale-while-revalidate=86400',
+      'Cache-Control': MEDIA_CACHE_CONTROL,
       'Accept-Ranges': 'bytes',
     }
 
