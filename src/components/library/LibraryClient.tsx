@@ -1,8 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import { motion } from 'framer-motion'
-import { Header, AlbumCard, TextureFilters } from '@/components'
+import { Header } from '@/components/layout/Header'
+import { AlbumCard } from '@/components/library/AlbumCard'
+import { TextureFilters } from '@/components/ui/TextureFilters'
 import type { Category, Album } from '@/types'
 
 function WoodShelf({
@@ -142,11 +143,7 @@ export function LibraryClient({
 
           <div className="relative z-10 py-4 sm:py-6">
             {initialError ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20"
-              >
+              <div className="text-center py-20 fade-in-up">
                 <p className="text-xl text-red-400">
                   {initialError === 'config'
                     ? 'Error al conectar con la biblioteca'
@@ -157,20 +154,16 @@ export function LibraryClient({
                     ? 'Revisá la configuración de Google Drive del servidor.'
                     : 'No se pudieron obtener los álbumes. Intentá de nuevo en unos minutos.'}
                 </p>
-              </motion.div>
+              </div>
             ) : groupedAlbums.length === 0 ? (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="text-center py-20"
-              >
+              <div className="text-center py-20 fade-in-up">
                 <p className="text-xl text-amber-200/80">
                   No hay álbumes disponibles
                 </p>
                 <p className="text-amber-100/40 mt-2">
                   Agrega categorías y álbumes a tu Google Drive para comenzar
                 </p>
-              </motion.div>
+              </div>
             ) : (
               groupedAlbums.map(({ label, albums: groupAlbums }) => {
                 const startIndex = globalIndex
