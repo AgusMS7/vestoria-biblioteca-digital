@@ -124,6 +124,7 @@ Copiá `.env.example` a `.env.local` y completá los valores (el ejemplo lista l
 | `SITE_NAME` | No | Nombre visible de la marca. Si falta, usa `Vestoria` |
 | `SITE_AUTH_USER` | No | Usuario de Basic Auth opcional |
 | `SITE_AUTH_PASS` | No | Contraseña de Basic Auth opcional |
+| `ALLOW_EMBED` | No | (Opcional, default off) Permite embeber el sitio en un iframe: con `true` no se emite `X-Frame-Options` y se agrega `Content-Security-Policy: frame-ancestors *`. Se resuelve en build; setear en el proyecto demo de Vercel antes del deploy. |
 
 **Importante:**
 - La `GOOGLE_PRIVATE_KEY` debe estar entrecomillada y contener `\n` literales para los saltos de línea
