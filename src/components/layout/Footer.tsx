@@ -10,7 +10,14 @@ export function Footer() {
       />
 
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="py-2 flex items-center justify-center gap-3">
+        <div className="py-4 flex items-center justify-center gap-3">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/book-gift-present-svgrepo-com.svg"
+            alt=""
+            aria-hidden="true"
+            className="header-logo-engraved w-[18px] h-[18px]"
+          />
           <span className="wood-engraved text-[11px]">VESTORIA</span>
           <span style={{ color: 'hsl(35 30% 60%)' }}>·</span>
           <span
@@ -26,10 +33,10 @@ export function Footer() {
         </div>
 
         <div
-          className="pb-3 text-center"
+          className="pb-4 text-center"
           style={{
             fontFamily: 'var(--font-sans)',
-            fontSize: '9px',
+            fontSize: '11px',
             textTransform: 'uppercase',
             letterSpacing: '.18em',
             color: 'hsl(35 20% 60%)',

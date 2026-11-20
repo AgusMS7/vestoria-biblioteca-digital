@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import { AlertCircle, RotateCw } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
 import { AlbumCard } from '@/components/library/AlbumCard'
 import { TextureFilters } from '@/components/ui/TextureFilters'
@@ -143,20 +144,38 @@ export function LibraryClient({
 
           <div className="relative z-10 pt-4 sm:pt-6 pb-2">
             {initialError ? (
-              <div className="min-h-[40vh] flex items-center justify-center text-center py-8 fade-in-up">
-                <p className="text-xl text-red-400">
+              <div className="min-h-[40vh] flex flex-col items-center justify-center text-center px-4 py-8 fade-in-up">
+                <AlertCircle
+                  className="header-logo-engraved h-10 w-10 mb-4"
+                  style={{ color: 'hsl(35 45% 70%)' }}
+                />
+                <h2 className="wood-engraved text-xl sm:text-2xl">
                   {initialError === 'config'
                     ? 'Error al conectar con la biblioteca'
                     : 'Error al cargar la biblioteca'}
-                </p>
-                <p className="text-sm text-red-300/70 mt-2">
+                </h2>
+                <p className="mt-3 text-sm leading-relaxed" style={{ color: 'hsl(35 30% 62%)' }}>
                   {initialError === 'config'
                     ? 'Revisá la configuración de Google Drive del servidor.'
                     : 'No se pudieron obtener los álbumes. Intentá de nuevo en unos minutos.'}
                 </p>
+                <button
+                  type="button"
+                  onClick={() => window.location.reload()}
+                  className="mt-7 flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm text-sm font-medium tracking-wide cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+                  style={{
+                    background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 24%, rgba(0,0,0,0.45) 100%)',
+                    boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -4px 10px rgba(0,0,0,0.65)',
+                    color: 'hsl(35 45% 70%)',
+                    fontFamily: 'var(--font-serif)',
+                  }}
+                >
+                  <RotateCw className="h-4 w-4" />
+                  Recargar
+                </button>
               </div>
             ) : groupedAlbums.length === 0 ? (
-              <div className="text-center py-8 fade-in-up">
+              <div className="min-h-[40vh] flex flex-col items-center justify-center text-center px-4 py-8 fade-in-up">
                 <p className="text-xl text-amber-200/80">
                   No hay álbumes disponibles
                 </p>

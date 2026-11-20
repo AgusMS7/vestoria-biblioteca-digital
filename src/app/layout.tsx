@@ -6,7 +6,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: `${env.site.name} - Biblioteca Digital`,
-  description: "Una biblioteca de ǭlbumes de fotos familiares con estǸtica vintage de madera",
+  description: "Una biblioteca de álbumes de fotos familiares con estética vintage de madera",
   icons: {
     icon: '/book-gift-present-svgrepo-com.svg',
   },
