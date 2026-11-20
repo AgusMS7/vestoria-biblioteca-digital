@@ -1,12 +1,41 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { env } from '@/config/env'
+import { createRateLimiter } from '@/lib/http/rate-limit'
+
+/** Límite alto: una carga normal de álbum no se acerca (≈60 requests). */
+const takeApiToken = createRateLimiter({ limit: 300, windowMs: 60_000 })
+
+function getClientIp(request: NextRequest): string {
+  const forwarded = request.headers.get('x-forwarded-for')
+
+  if (forwarded) {
+    return forwarded.split(',')[0].trim()
+  }
+
+  return request.headers.get('x-real-ip') ?? 'unknown'
+}
 
 /**
- * Basic Auth opcional. Solo interviene si SITE_AUTH_USER y SITE_AUTH_PASS
- * están definidas; sin ellas deja pasar todo sin tocar la request.
+ * Basic Auth opcional + rate limit de /api/*.
+ * Basic Auth solo interviene si SITE_AUTH_USER y SITE_AUTH_PASS están
+ * definidas; sin ellas no se pide login.
  */
 export function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const { allowed, retryAfterSeconds } = takeApiToken(getClientIp(request))
+
+    if (!allowed) {
+      return new NextResponse('Too Many Requests', {
+        status: 429,
+        headers: {
+          'Retry-After': String(retryAfterSeconds),
+          'Cache-Control': 'no-store',
+        },
+      })
+    }
+  }
+
   const user = env.auth.user
   const pass = env.auth.pass
 
