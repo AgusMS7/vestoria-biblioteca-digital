@@ -1,4 +1,4 @@
-import { getDriveClient, isValidDriveId } from '@/lib/google-drive'
+import { getDriveClient, isDriveNotFoundError, isValidDriveId } from '@/lib/google-drive'
 import type { Readable } from 'node:stream'
 import sharp from 'sharp'
 
@@ -76,8 +76,11 @@ export async function GET(
       }
       const sizeParam = sizeMap[size] || 'w200-h200'
 
-      // Reemplazar el parámetro de tamaño existente (=s, =w320, etc)
-      const resizedUrl = thumbnailUrl.replace(/=w?\d+.*$/, `=${sizeParam}`)
+      // Reemplazar el parámetro de tamaño existente (=s220, =w320, =w200-h200…)
+      const resizedUrl = thumbnailUrl.replace(
+        /=[swh]\d+(?:-[swh]\d+)?/,
+        `=${sizeParam}`
+      )
 
       try {
         const thumbnailResponse = await fetch(resizedUrl, {
@@ -214,6 +217,10 @@ export async function GET(
     return new Response('Unsupported file type', { status: 400 })
   } catch (error) {
     console.error('Error serving thumbnail:', error)
+
+    if (isDriveNotFoundError(error)) {
+      return new Response('File not found', { status: 404 })
+    }
 
     return new Response(
       JSON.stringify({

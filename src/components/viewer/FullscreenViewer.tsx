@@ -48,7 +48,9 @@ export function FullscreenViewer({
   const [zoom, setZoom] = useState(1)
 
   // Video-specific state
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false)
+  const [isVideoPlaying, setIsVideoPlaying] = useState(
+    autoPlay && media[initialIndex]?.type === 'video'
+  )
   const [videoDuration, setVideoDuration] = useState(0)
   const [videoCurrentTime, setVideoCurrentTime] = useState(0)
   const [videoVolume, setVideoVolume] = useState(1)
@@ -88,34 +90,41 @@ export function FullscreenViewer({
     hideControlsAfterDelay()
   }, [hideControlsAfterDelay])
 
+  const goTo = useCallback(
+    (index: number) => {
+      const nextIndex = ((index % media.length) + media.length) % media.length
+      setCurrentIndex(nextIndex)
+      setRotation(0)
+      setFitMode('contain')
+      setZoom(1)
+      // En presentación un video arranca solo para que su `ended` cierre el paso.
+      setIsVideoPlaying(
+        isSlideshow && media[nextIndex]?.type === 'video'
+      )
+      setVideoCurrentTime(0)
+    },
+    [isSlideshow, media]
+  )
+
   const goNext = useCallback(() => {
-    setCurrentIndex((prev) => (prev + 1) % media.length)
-    setRotation(0)
-    setFitMode('contain')
-    setZoom(1)
-    setIsVideoPlaying(false)
-    setVideoCurrentTime(0)
-  }, [media.length])
+    goTo(currentIndex + 1)
+  }, [goTo, currentIndex])
 
   const goPrev = useCallback(() => {
-    setCurrentIndex((prev) => (prev - 1 + media.length) % media.length)
-    setRotation(0)
-    setFitMode('contain')
-    setZoom(1)
-    setIsVideoPlaying(false)
-    setVideoCurrentTime(0)
-  }, [media.length])
+    goTo(currentIndex - 1)
+  }, [goTo, currentIndex])
 
-  // Slideshow: advances to next media after 6 seconds
+  // Slideshow: images advance after 6 seconds; videos advance when they end.
   useEffect(() => {
     if (!isSlideshow || media.length <= 1) return
+    if (currentMedia.type !== 'image') return
 
     const interval = setInterval(() => {
       goNext()
     }, 6000)
 
     return () => clearInterval(interval)
-  }, [isSlideshow, media.length, goNext])
+  }, [isSlideshow, media.length, currentMedia.type, goNext])
 
   // Keyboard navigation
   useEffect(() => {
@@ -288,6 +297,10 @@ export function FullscreenViewer({
               }}
               onTimeUpdate={(e) => {
                 setVideoCurrentTime(e.currentTarget.currentTime)
+              }}
+              onEnded={() => {
+                setIsVideoPlaying(false)
+                if (isSlideshow) goNext()
               }}
             />
           )}
@@ -466,12 +479,7 @@ export function FullscreenViewer({
                   <button
                     key={idx}
                     onClick={() => {
-                      setCurrentIndex(idx)
-                      setRotation(0)
-                      setFitMode('contain')
-                      setZoom(1)
-                      setIsVideoPlaying(false)
-                      setVideoCurrentTime(0)
+                      goTo(idx)
                     }}
                     className={cn(
                       'w-2 h-2 rounded-full transition-all cursor-pointer focus:ring-2 focus:ring-white focus:outline-none',

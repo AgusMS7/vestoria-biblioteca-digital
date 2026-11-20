@@ -1,6 +1,6 @@
 export const runtime = 'nodejs'
 
-import { getAlbum, isValidDriveId } from '@/lib/google-drive'
+import { getAlbum, isDriveNotFoundError, isValidDriveId } from '@/lib/google-drive'
 import { isGoogleConfigured } from '@/config/env'
 
 export async function GET(
@@ -48,6 +48,16 @@ export async function GET(
     })
   } catch (error) {
     console.error(`API /albums/[id] error:`, error)
+
+    if (isDriveNotFoundError(error)) {
+      return Response.json(
+        {
+          success: false,
+          error: 'Album not found',
+        },
+        { status: 404 }
+      )
+    }
 
     if (!isGoogleConfigured()) {
       return Response.json(

@@ -1,6 +1,5 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { Search, ArrowUp, ArrowDown } from 'lucide-react'
 import { cn } from '@/lib'
 import { useSiteName } from './SiteNameContext'
@@ -27,12 +26,7 @@ export function Header({
   }
 
   return (
-    <motion.header
-      initial={{ y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: 'easeOut' }}
-      className="sticky top-0 z-50"
-    >
+    <header className="sticky top-0 z-50 header-in">
       <div className="wood-dark py-6 px-4 sm:px-6 lg:px-8 relative overflow-hidden">
         <div className="absolute inset-0 bg-black/10" />
 
@@ -45,11 +39,7 @@ export function Header({
 
         <div className="max-w-6xl mx-auto relative z-10">
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
-            <motion.div
-              className="flex items-center justify-center lg:justify-start gap-3"
-              whileHover={{ scale: 1.01 }}
-              transition={{ type: 'spring', stiffness: 400 }}
-            >
+            <div className="flex items-center justify-center lg:justify-start gap-3 transition-transform duration-300 hover:scale-[1.01]">
               <img
                 src="/book-gift-present-svgrepo-com.svg"
                 alt={siteName}
@@ -58,7 +48,7 @@ export function Header({
               <h1 className="text-3xl sm:text-4xl header-title-engraved tracking-wide">
                 {siteName}
               </h1>
-            </motion.div>
+            </div>
 
             <div className="flex flex-row gap-3 flex-1 lg:max-w-md">
               <div className="relative flex-1">
@@ -90,14 +80,13 @@ export function Header({
                 />
               </div>
 
-              <motion.button
+              <button
                 onClick={toggleSort}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
                 className={cn(
                   'flex items-center justify-center gap-2 px-3 py-2.5 rounded-sm',
                   'text-sm font-medium tracking-wide cursor-pointer',
-                  'transition-all duration-200 relative z-10'
+                  'transition-all duration-200 relative z-10',
+                  'hover:scale-105 active:scale-95'
                 )}
                 style={{
                   background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 24%, rgba(0,0,0,0.45) 100%)',
@@ -118,7 +107,7 @@ export function Header({
                     <span className="hidden sm:inline text-xs">Z-A</span>
                   </>
                 )}
-              </motion.button>
+              </button>
             </div>
           </div>
         </div>
@@ -130,6 +119,6 @@ export function Header({
           }}
         />
       </div>
-    </motion.header>
+    </header>
   )
 }

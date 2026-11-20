@@ -1,8 +1,8 @@
 'use client'
 
-import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { Play } from 'lucide-react'
+import { formatMediaCount } from '@/lib/utils/media-count'
 import type { Album } from '@/types'
 
 interface AlbumCardProps {
@@ -76,18 +76,14 @@ function BindingRings() {
 
 export function AlbumCard({ album, index }: AlbumCardProps) {
   const router = useRouter()
-  const hasVideo = album.media.some(m => m.type === 'video')
+  const hasVideo = album.hasVideo
   const colors = getAlbumColors(album.dominantColor)
 
   return (
-    <motion.article
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay: index * 0.06, ease: 'easeOut' }}
-      whileHover={{ y: -6, scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+    <article
       onClick={() => router.push(`/album/${album.id}`)}
-      className="cursor-pointer group"
+      style={{ animationDelay: `${index * 60}ms` }}
+      className="cursor-pointer group card-in transition-transform duration-300 hover:-translate-y-1.5 hover:scale-[1.02] active:scale-[0.98]"
     >
       <div className="relative pl-3.5">
         <div 
@@ -142,7 +138,7 @@ export function AlbumCard({ album, index }: AlbumCardProps) {
                 className="text-[10px] sm:text-xs mt-0.5 relative z-10"
                 style={{ color: colors.textMuted }}
               >
-                {album.mediaCount} fotos
+                {formatMediaCount(album.photoCount, album.videoCount)}
               </p>
             </div>
           </div>
@@ -156,6 +152,6 @@ export function AlbumCard({ album, index }: AlbumCardProps) {
           />
         </div>
       </div>
-    </motion.article>
+    </article>
   )
 }

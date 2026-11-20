@@ -4,7 +4,6 @@ export { MemoryCache } from './memory.cache'
 import { MemoryCache } from './memory.cache'
 import type { Category } from '@/types/category'
 import type { Album } from '@/types/album'
-import type { Media } from '@/types/media'
 
 /**
  * Instancias singleton de caché para diferentes tipos de datos
@@ -12,5 +11,9 @@ import type { Media } from '@/types/media'
  */
 export const categoryCache = new MemoryCache<Category[]>()
 export const albumCache = new MemoryCache<Album[]>()
-export const mediaCache = new MemoryCache<Media[]>()
-export const coverCache = new MemoryCache<Media | 'none'>()
+
+/** Fecha EXIF por `id+modifiedTime`; `null` = se intentó y no había. */
+export const exifDateCache = new MemoryCache<{
+  year: number
+  month?: number
+} | null>()

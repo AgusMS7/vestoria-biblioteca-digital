@@ -7,11 +7,14 @@ import type { Media } from './media'
 export interface Album {
   id: string
   title: string
-  year: number
+  year: number | null
   category: string
   coverImage: string
   description?: string
   mediaCount: number
+  photoCount: number
+  videoCount: number
+  hasVideo: boolean
   media: Media[]
   dominantColor: { h: number; s: number; l: number }
 }

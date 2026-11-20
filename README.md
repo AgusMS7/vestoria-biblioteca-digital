@@ -124,6 +124,7 @@ Copiá `.env.example` a `.env.local` y completá los valores (el ejemplo lista l
 | `SITE_NAME` | No | Nombre visible de la marca. Si falta, usa `Vestoria` |
 | `SITE_AUTH_USER` | No | Usuario de Basic Auth opcional |
 | `SITE_AUTH_PASS` | No | Contraseña de Basic Auth opcional |
+| `ALLOW_EMBED` | No | (Opcional, default off) Permite embeber el sitio en un iframe: con `true` no se emite `X-Frame-Options` y se agrega `Content-Security-Policy: frame-ancestors *`. Se resuelve en build; setear en el proyecto demo de Vercel antes del deploy. |
 
 **Importante:**
 - La `GOOGLE_PRIVATE_KEY` debe estar entrecomillada y contener `\n` literales para los saltos de línea
@@ -393,10 +394,6 @@ Asegúrate de que el hosting soporta:
 - **Basic Auth opcional**: si se definen `SITE_AUTH_USER` y `SITE_AUTH_PASS`, el sitio pide login; sin ellas queda abierto como antes
 - **No indexación**: todas las respuestas llevan `X-Robots-Tag: noindex, nofollow`; `robots.txt` permite el rastreo para que Google pueda leer el header
 
-## 📈 Arquitectura y Decisiones
-
-Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI_CONTEXT.md](./AI_CONTEXT.md).
-
 ## 🔮 Mejoras Futuras
 
 - **Caché inteligente**: Implementar caché de metadatos para reducir llamadas a Google Drive
@@ -416,7 +413,7 @@ Para una documentación detallada sobre las decisiones arquitectónicas, ver [AI
 
 ## 👨‍💻 Desarrollo Continuo
 
-Este proyecto está en desarrollo activo. Para cambios no previstos o decisiones de arquitectura, ver [AI_CONTEXT.md](./AI_CONTEXT.md).
+Este proyecto está en desarrollo activo.
 
 ---
 

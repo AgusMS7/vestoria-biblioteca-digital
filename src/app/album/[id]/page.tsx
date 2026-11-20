@@ -3,8 +3,9 @@
 import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ArrowLeft, Play, Calendar, Presentation } from 'lucide-react'
+import { ArrowLeft, Play, Calendar, Presentation, AlertCircle, RotateCw } from 'lucide-react'
 import { FullscreenViewer, TextureFilters, LoadingOverlay } from '@/components'
+import { formatMediaCount } from '@/lib/utils/media-count'
 import type { Album, Media } from '@/types'
 
 type YearSortOrder = 'asc' | 'desc'
@@ -388,13 +389,42 @@ export default function AlbumPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-zinc-900 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-xl text-zinc-400">{error}</p>
+      <div className="flex-1 bg-zinc-900 flex flex-col items-center justify-center text-center px-4 py-8">
+        <AlertCircle
+          className="header-logo-engraved h-10 w-10 mb-4"
+          style={{ color: 'hsl(35 45% 70%)' }}
+        />
+        <h2 className="wood-engraved text-xl sm:text-2xl">No se pudo cargar el álbum</h2>
+        <p className="mt-3 text-sm leading-relaxed" style={{ color: 'hsl(35 30% 62%)' }}>
+          {error}
+        </p>
+        <div className="mt-7 flex flex-col sm:flex-row items-center justify-center gap-3">
           <button
-            onClick={() => router.push('/')}
-            className="mt-4 px-6 py-2 rounded-lg bg-amber-600 text-white hover:opacity-90 transition-opacity"
+            type="button"
+            onClick={() => window.location.reload()}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm text-sm font-medium tracking-wide cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 24%, rgba(0,0,0,0.45) 100%)',
+              boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -4px 10px rgba(0,0,0,0.65)',
+              color: 'hsl(35 45% 70%)',
+              fontFamily: 'var(--font-serif)',
+            }}
           >
+            <RotateCw className="h-4 w-4" />
+            Recargar
+          </button>
+          <button
+            type="button"
+            onClick={() => router.push('/')}
+            className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-sm text-sm font-medium tracking-wide cursor-pointer transition-all duration-200 hover:scale-105 active:scale-95"
+            style={{
+              background: 'linear-gradient(to bottom, rgba(0,0,0,0.45) 0%, rgba(0,0,0,0.25) 24%, rgba(0,0,0,0.45) 100%)',
+              boxShadow: 'inset 0 1px 2px rgba(255,255,255,0.06), inset 0 -4px 10px rgba(0,0,0,0.65)',
+              color: 'hsl(35 45% 70%)',
+              fontFamily: 'var(--font-serif)',
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
             Volver a la biblioteca
           </button>
         </div>
@@ -418,7 +448,7 @@ export default function AlbumPage() {
   }
 
   return (
-    <div className="min-h-screen paper-background">
+    <div className="flex-1 flex flex-col paper-background">
       <TextureFilters />
       <LoadingOverlay isVisible={loading} />
 
@@ -477,7 +507,7 @@ export default function AlbumPage() {
                         fontStyle: 'italic',
                       }}
                     >
-                      {album.media.length} fotos
+                      {formatMediaCount(album.photoCount, album.videoCount)}
                     </span>
                   </div>
                 </div>
@@ -551,9 +581,9 @@ export default function AlbumPage() {
         </>
       )}
 
-      <main className="min-h-[calc(100vh-120px)] relative z-10">
+      <main className="flex-1 relative z-10">
         {album ? (
-          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 py-10 sm:py-14">
+          <div className="max-w-6xl mx-auto px-6 sm:px-8 lg:px-12 pt-10 sm:pt-14 pb-4">
             {album.media.length === 0 ? (
               <div className="text-center text-zinc-500">
                 <p>No hay archivos multimedia en este álbum</p>

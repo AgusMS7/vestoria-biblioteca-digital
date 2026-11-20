@@ -8,6 +8,11 @@ import {
   isMediaFile,
 } from './mapper'
 import { categoryCache, albumCache } from '@/lib/cache'
+import { mapWithConcurrency } from '@/lib/utils/concurrency'
+import { listAllFiles } from './list'
+import { extractYearMonthFromName } from './date-extractor'
+import { readExifDates } from './exif-reader'
+import { rethrowDriveError } from './errors'
 import { env } from '@/config/env'
 import type { Album } from '@/types/album'
 import type { Media } from '@/types/media'
@@ -27,7 +32,7 @@ export async function getCategories(): Promise<Category[]> {
     const drive = getDriveClient()
     const rootFolderId = env.google.rootFolderId
 
-    const response = await drive.files.list({
+    const folders = await listAllFiles(drive, {
       q: `'${rootFolderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
       spaces: 'drive',
       fields: 'files(id, name)',
@@ -37,22 +42,11 @@ export async function getCategories(): Promise<Category[]> {
 
     const categories: Category[] = []
 
-    if (response.data.files) {
-      for (const folder of response.data.files) {
-        // Contar álbumes en cada categoría
-        const albumsResponse = await drive.files.list({
-          q: `'${folder.id}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
-          spaces: 'drive',
-          fields: 'files(id)',
-          pageSize: 1,
-        })
+    for (const folder of folders) {
+      const category = mapToCategory(folder)
 
-        const albumCount = albumsResponse.data.files?.length || 0
-        const category = mapToCategory(folder, albumCount)
-
-        if (category) {
-          categories.push(category)
-        }
+      if (category) {
+        categories.push(category)
       }
     }
 
@@ -61,7 +55,7 @@ export async function getCategories(): Promise<Category[]> {
     return categories
   } catch (error) {
     console.error('Error getting categories:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
@@ -87,7 +81,7 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
     const categoryName = categoryResponse.data.name || 'Unknown'
 
     // Listar álbumes en la categoría
-    const response = await drive.files.list({
+    const folders = await listAllFiles(drive, {
       q: `'${categoryId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`,
       spaces: 'drive',
       fields: 'files(id, name, imageMediaMetadata, videoMediaMetadata)',
@@ -97,12 +91,15 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
 
     const albums: Album[] = []
 
-    if (response.data.files) {
-      for (const folder of response.data.files) {
-        const album = await getAlbumDetails(folder.id!, categoryName, folder)
-        if (album) {
-          albums.push(album)
-        }
+    const albumFolders = folders.filter((folder) => folder.id)
+
+    const details = await mapWithConcurrency(albumFolders, 4, (folder) =>
+      getAlbumDetails(folder.id!, categoryName, folder)
+    )
+
+    for (const album of details) {
+      if (album) {
+        albums.push(album)
       }
     }
 
@@ -111,7 +108,7 @@ export async function getAlbums(categoryId: string): Promise<Album[]> {
     return albums
   } catch (error) {
     console.error('Error getting albums:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
@@ -147,7 +144,7 @@ export async function getAlbum(albumId: string): Promise<Album | null> {
     return getAlbumDetails(albumId, categoryName, folderResponse.data)
   } catch (error) {
     console.error('Error getting album:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
@@ -163,15 +160,13 @@ async function getAlbumDetails(
     const drive = getDriveClient()
 
     // Obtener todos los archivos del álbum (incluyendo timestamps)
-    const filesResponse = await drive.files.list({
+    const files = await listAllFiles(drive, {
       q: `'${albumId}' in parents and trashed=false`,
       spaces: 'drive',
       fields: 'files(id, name, mimeType, imageMediaMetadata, videoMediaMetadata, modifiedTime)',
       pageSize: 1000,
       orderBy: 'name',
     })
-
-    const files = filesResponse.data.files || []
 
     // Separar portada y medias
     let coverFile = null
@@ -188,9 +183,9 @@ async function getAlbumDetails(
     // Obtener portada (primero cover file, sino primer media)
     let coverImage = ''
     if (coverFile) {
-      coverImage = `/api/media/${coverFile.id}/thumbnail`
+      coverImage = `/api/media/${coverFile.id}/thumbnail?size=large`
     } else if (mediaFiles.length > 0) {
-      coverImage = `/api/media/${mediaFiles[0].id}/thumbnail`
+      coverImage = `/api/media/${mediaFiles[0].id}/thumbnail?size=large`
     }
 
     // Mapear archivos multimedia
@@ -198,12 +193,55 @@ async function getAlbumDetails(
       .map((file) => mapToMediaItem(file))
       .filter((m): m is Media => m !== null)
 
+    // EXIF solo como respaldo de los medios sin fecha en el nombre.
+    await applyExifFallback(drive, mediaFiles, media)
+
     // Mapear álbum
     return mapToAlbum(folderData, category, coverImage, media)
   } catch (error) {
     console.error('Error getting album details:', error)
-    throw error
+    rethrowDriveError(error)
   }
 }
 
 
+
+/**
+ * Completa year/month leyendo EXIF DateTimeOriginal de los medios de imagen
+ * cuyo nombre no trae fecha. Lo no resuelto queda con modifiedTime.
+ */
+async function applyExifFallback(
+  drive: ReturnType<typeof getDriveClient>,
+  files: drive_v3.Schema$File[],
+  media: Media[]
+): Promise<void> {
+  const eligible = files.filter(
+    (file) =>
+      file.id &&
+      file.mimeType &&
+      isMediaFile(file.mimeType) &&
+      file.mimeType.startsWith('image/') &&
+      !extractYearMonthFromName(file.name ?? '')
+  )
+
+  if (eligible.length === 0) {
+    return
+  }
+
+  const dates = await readExifDates(drive, eligible)
+
+  if (dates.size === 0) {
+    return
+  }
+
+  const mediaById = new Map(media.map((item) => [item.id, item]))
+
+  for (const [id, date] of dates) {
+    const item = mediaById.get(id)
+
+    if (item) {
+      item.year = date.year
+      item.month = date.month
+    }
+  }
+}

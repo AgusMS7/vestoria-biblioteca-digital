@@ -52,7 +52,7 @@ export function mapToMediaItem(
     width,
     height,
     duration,
-    thumbnailUrl: `/api/media/${id}/thumbnail`,
+    thumbnailUrl: `/api/media/${id}/thumbnail?size=large`,
     mediaUrl: `/api/media/${id}`,
   }
 }
@@ -73,9 +73,18 @@ export function mapToAlbum(
     return null
   }
 
-  // Intentar extraer el año del nombre del álbum (ej: "Mi Viaje 2024")
+  const photoCount = mediaItems.filter((item) => item.type === 'image').length
+  const videoCount = mediaItems.length - photoCount
+
+  // Año del álbum: primero el del nombre de la carpeta (ej: "Mi Viaje 2024");
+  // si no hay, el del medio más antiguo; si tampoco, queda desconocido.
   const yearMatch = name.match(/(\d{4})/)
-  const year = yearMatch ? parseInt(yearMatch[1], 10) : new Date().getFullYear()
+  const yearFromName = yearMatch ? Number.parseInt(yearMatch[1], 10) : null
+  const yearFromMedia = mediaItems.reduce<number | null>((oldest, item) => {
+    if (typeof item.year !== 'number') return oldest
+    return oldest === null || item.year < oldest ? item.year : oldest
+  }, null)
+  const year = yearFromName ?? yearFromMedia
 
   return {
     id,
@@ -84,6 +93,9 @@ export function mapToAlbum(
     category,
     coverImage,
     mediaCount: mediaItems.length,
+    photoCount,
+    videoCount,
+    hasVideo: videoCount > 0,
     media: mediaItems,
     dominantColor: getAlbumColor(id), // Color asignado determinísticamente basado en ID
     description: undefined,
@@ -94,8 +106,7 @@ export function mapToAlbum(
  * Transforma una carpeta de Google Drive (categoría) en nuestro modelo de Category
  */
 export function mapToCategory(
-  driveFolder: drive_v3.Schema$File,
-  albumCount: number
+  driveFolder: drive_v3.Schema$File
 ): Category | null {
   const id = driveFolder?.id
   const name = driveFolder?.name
@@ -107,7 +118,6 @@ export function mapToCategory(
   return {
     id,
     name,
-    albumCount,
   }
 }
 
@@ -120,6 +130,8 @@ export function isMediaFile(mimeType: string): boolean {
     'image/png',
     'image/webp',
     'image/gif',
+    'image/heic',
+    'image/heif',
     'video/mp4',
     'video/quicktime',
     'video/x-msvideo',
