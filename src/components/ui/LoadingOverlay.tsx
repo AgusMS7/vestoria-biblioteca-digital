@@ -1,9 +1,13 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useSyncExternalStore } from 'react'
 import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import lottie, { type AnimationItem } from 'lottie-web'
+
+const subscribe = () => () => {}
+const getClientSnapshot = () => true
+const getServerSnapshot = () => false
 
 interface LoadingOverlayProps {
   isVisible: boolean
@@ -13,11 +17,9 @@ interface LoadingOverlayProps {
 export function LoadingOverlay({ isVisible, animationData = '/book-loading.json' }: LoadingOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<AnimationItem | null>(null)
-  const [mounted, setMounted] = useState(false)
-
-  useEffect(() => {
-    setMounted(true)
-  }, [])
+  // Client-only flag without setState-in-effect: false during SSR/hydration,
+  // true once mounted on the client.
+  const mounted = useSyncExternalStore(subscribe, getClientSnapshot, getServerSnapshot)
 
   useEffect(() => {
     if (!isVisible || !mounted || !containerRef.current) return
