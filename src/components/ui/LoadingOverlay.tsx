@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import lottie, { type AnimationItem } from 'lottie-web'
 
@@ -12,9 +13,14 @@ interface LoadingOverlayProps {
 export function LoadingOverlay({ isVisible, animationData = '/book-loading.json' }: LoadingOverlayProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const animationRef = useRef<AnimationItem | null>(null)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    if (!isVisible || !containerRef.current) return
+    setMounted(true)
+  }, [])
+
+  useEffect(() => {
+    if (!isVisible || !mounted || !containerRef.current) return
 
     // Initialize Lottie animation
     if (!animationRef.current) {
@@ -35,9 +41,13 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
         animationRef.current.pause()
       }
     }
-  }, [isVisible, animationData])
+  }, [isVisible, animationData, mounted])
 
-  return (
+  if (!mounted) return null
+
+  // Portal to <body> so the overlay is always centered in the viewport and the
+  // backdrop blur samples the current page, not an isolated ancestor.
+  return createPortal(
     <AnimatePresence>
       {isVisible && (
         <motion.div
@@ -49,6 +59,7 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
           style={{
             zIndex: 9999,
             backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
             backgroundColor: 'rgba(0, 0, 0, 0.35)',
           }}
           onClick={(e) => e.stopPropagation()}
@@ -79,6 +90,7 @@ export function LoadingOverlay({ isVisible, animationData = '/book-loading.json'
           />
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   )
 }
