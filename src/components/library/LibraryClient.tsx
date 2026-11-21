@@ -3,6 +3,7 @@
 import { useState, useMemo } from 'react'
 import { AlertCircle, RotateCw } from 'lucide-react'
 import { Header } from '@/components/layout/Header'
+import { Footer } from '@/components/layout/Footer'
 import { AlbumCard } from '@/components/library/AlbumCard'
 import { TextureFilters } from '@/components/ui/TextureFilters'
 import type { Category, Album } from '@/types'
@@ -212,7 +213,7 @@ export function LibraryClient({
         />
       </div>
 
-
+      <Footer />
     </div>
   )
 }

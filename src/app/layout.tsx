@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { env } from "@/config/env";
 import { SiteNameProvider } from "@/components/layout/SiteNameContext";
-import { Footer } from "@/components/layout/Footer";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -37,7 +36,6 @@ export default function RootLayout({
         <SiteNameProvider name={env.site.name}>
           <div className="flex-1 flex flex-col">{children}</div>
         </SiteNameProvider>
-        <Footer />
       </body>
     </html>
   );
