@@ -2,6 +2,8 @@
   "name": "vestoria-biblioteca-digital-next",
   "version": "0.1.0",
   "private": true,
+  "license": "MIT",
+  "author": "Agustín Matías Sandoval",
   "engines": {
     "node": ">=20.9"
   },

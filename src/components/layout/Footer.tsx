@@ -35,7 +35,16 @@ export function Footer() {
             color: 'hsl(35 20% 60%)',
           }}
         >
-          CÓDIGO BAJO LICENCIA MIT · © 2026
+          <a
+            href="https://github.com/AgusMS7/vestoria-biblioteca-digital/blob/main/LICENSE"
+            target="_blank"
+            rel="noreferrer"
+            className="transition-colors hover:text-[hsl(35_45%_75%)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[hsl(35_45%_65%)] focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
+            style={{ color: 'inherit' }}
+          >
+            CÓDIGO BAJO LICENCIA MIT
+          </a>{' '}
+          · CONTENIDO Y MARCA RESERVADOS · © 2026
         </div>
       </div>
     </footer>
