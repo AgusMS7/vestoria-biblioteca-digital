@@ -258,6 +258,9 @@ El código se distribuye bajo licencia [MIT](./LICENSE). Las fotos y los videos 
 la demo son material de stock con sus propias licencias y no forman parte del
 código.
 
+El contenido, la marca y los datos del cliente no están cubiertos por la
+licencia MIT. Ver [NOTICE.md](./NOTICE.md).
+
 ¿Quieres una biblioteca así para tu familia, o conversar sobre el proyecto?
 
 **Contáctame:** [agustin.matias.sandoval@gmail.com](mailto:agustin.matias.sandoval@gmail.com)
